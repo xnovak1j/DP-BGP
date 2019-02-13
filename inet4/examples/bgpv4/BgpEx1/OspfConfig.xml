@@ -20,28 +20,28 @@
 	
 	<Router name="R1" RFC1583Compatible="true">
 	 <!--	<PointToPointInterface ifName="eth0" areaID="0.0.0.1" interfaceOutputCost="10" /> -->
-	<!--	<ExternalInterface ifName="eth0" advertisedExternalNetworkAddress="100.0.1.0" advertisedExternalNetworkMask="255.255.255.252" externalInterfaceOutputCost="10" externalInterfaceOutputType="Type2" forwardingAddress="0.0.0.0" externalRouteTag="0x00" /> -->
-		<BroadcastInterface ifName="eth0" areaID="0.0.0.1" interfaceOutputCost="1" routerPriority="1" />
+	<!--	<ExternalInterface ifName="eth0" advertisedExternalNetworkAddress="100.0.1.0" advertisedExternalNetworkMask="255.255.255.252" externalInterfaceOutputCost="10" externalInterfaceOutputType="Type2" forwardingAddress="0.0.0.0" externalRouteTag="0x00" /> 
+		<BroadcastInterface ifName="eth0" areaID="0.0.0.1" interfaceOutputCost="1" routerPriority="1" /> -->
 	</Router>
 	
 	<Router name="R2" RFC1583Compatible="true">
-		<PointToPointInterface ifName="eth0" areaID="0.0.0.2" interfaceOutputCost="10" />
-	 <!--	<PointToPointInterface ifName="eth2" areaID="0.0.0.2" interfaceOutputCost="10" /> -->
-	<!--	<ExternalInterface ifName="eth2" advertisedExternalNetworkAddress="200.0.2.0" advertisedExternalNetworkMask="255.255.255.252" externalInterfaceOutputCost="10" externalInterfaceOutputType="Type2" forwardingAddress="0.0.0.0" externalRouteTag="0x00" /> -->
-		<BroadcastInterface ifName="eth2" areaID="0.0.0.2" interfaceOutputCost="1" routerPriority="1" />
+	<!--	<PointToPointInterface ifName="eth0" areaID="0.0.0.2" interfaceOutputCost="10" />
+	 	<PointToPointInterface ifName="eth2" areaID="0.0.0.2" interfaceOutputCost="10" /> -->
+	<!--	<ExternalInterface ifName="eth2" advertisedExternalNetworkAddress="200.0.2.0" advertisedExternalNetworkMask="255.255.255.252" externalInterfaceOutputCost="10" externalInterfaceOutputType="Type2" forwardingAddress="0.0.0.0" externalRouteTag="0x00" /> 
+		<BroadcastInterface ifName="eth2" areaID="0.0.0.2" interfaceOutputCost="1" routerPriority="1" /> -->
 	
 	</Router>    
 	
 	<Router name="R3" RFC1583Compatible="true">
-		<PointToPointInterface ifName="eth0" areaID="0.0.0.2" interfaceOutputCost="10" />
-	 <!--	<PointToPointInterface ifName="eth2" areaID="0.0.0.2" interfaceOutputCost="10" /> -->
-	 <!--	<ExternalInterface ifName="eth2" advertisedExternalNetworkAddress="200.0.3.0" advertisedExternalNetworkMask="255.255.255.252" externalInterfaceOutputCost="10" externalInterfaceOutputType="Type2" forwardingAddress="0.0.0.0" externalRouteTag="0x00" /> -->
-		<BroadcastInterface ifName="eth2" areaID="0.0.0.2" interfaceOutputCost="1" routerPriority="1" />
+	<!--	<PointToPointInterface ifName="eth0" areaID="0.0.0.2" interfaceOutputCost="10" />
+	 	<PointToPointInterface ifName="eth2" areaID="0.0.0.2" interfaceOutputCost="10" /> -->
+	 <!--	<ExternalInterface ifName="eth2" advertisedExternalNetworkAddress="200.0.3.0" advertisedExternalNetworkMask="255.255.255.252" externalInterfaceOutputCost="10" externalInterfaceOutputType="Type2" forwardingAddress="0.0.0.0" externalRouteTag="0x00" /> 
+		<BroadcastInterface ifName="eth2" areaID="0.0.0.2" interfaceOutputCost="1" routerPriority="1" /> -->
 	</Router>
 	
 	<Router name="R4" RFC1583Compatible="true">
 	 <!--	<PointToPointInterface ifName="eth0" areaID="0.0.0.3" interfaceOutputCost="10" /> -->
-	 <!--	<ExternalInterface ifName="eth0" advertisedExternalNetworkAddress="100.0.4.0" advertisedExternalNetworkMask="255.255.255.252" externalInterfaceOutputCost="10" externalInterfaceOutputType="Type2" forwardingAddress="0.0.0.0" externalRouteTag="0x00" /> -->
-		<BroadcastInterface ifName="eth0" areaID="0.0.0.3" interfaceOutputCost="1" routerPriority="1" />
+	 <!--	<ExternalInterface ifName="eth0" advertisedExternalNetworkAddress="100.0.4.0" advertisedExternalNetworkMask="255.255.255.252" externalInterfaceOutputCost="10" externalInterfaceOutputType="Type2" forwardingAddress="0.0.0.0" externalRouteTag="0x00" /> 
+		<BroadcastInterface ifName="eth0" areaID="0.0.0.3" interfaceOutputCost="1" routerPriority="1" /> -->
 	</Router>    
 </OSPFASConfig>

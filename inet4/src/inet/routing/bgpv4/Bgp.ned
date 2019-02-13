@@ -60,6 +60,7 @@ simple Bgp like IBgp
         string ospfRoutingModule;
         @display("i=block/network2");
         xml bgpConfig;
+        xml config;
     gates:
         input socketIn;
         output socketOut;

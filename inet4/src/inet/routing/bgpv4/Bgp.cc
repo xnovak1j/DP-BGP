@@ -56,9 +56,12 @@ void Bgp::initialize(int stage)
 
         _rt6 = getModuleFromPar<Ipv6RoutingTable>(par("routingTableModule6"), this);
 
+        //read config
+        cXMLElement *config = par("config");
+
         // read BGP configuration
         cXMLElement *bgpConfig = par("bgpConfig");
-        loadConfigFromXML(bgpConfig);
+        loadConfigFromXML(bgpConfig, config);
         createWatch("myAutonomousSystem", _myAS);
         WATCH_PTRVECTOR(_BGPRoutingTable);
         WATCH_PTRVECTOR(_BGPRoutingTable6);
@@ -309,6 +312,17 @@ void Bgp::processMessage(const BgpUpdateMessage& msg)
 /* add entry to routing table, or delete entry */
 unsigned char Bgp::decisionProcess(const BgpUpdateMessage& msg, RoutingTableEntry *entry, SessionId sessionIndex)
 {
+//    if (_BGPSessions[sessionIndex]->getType() == IGP) {
+//        std::cout << "moj drsny vypis" << std::endl;
+//        std::cout<<msg.getPathAttributeList(0).getOrigin().getValue()<<std::endl;
+//        std::cout << msg.getNLRI().prefix << std::endl;
+//        std::cout<< entry->getDestination().str() << std::endl;
+//
+//        unsigned long ind = isInTable(_BGPRoutingTable, entry);
+//        if (ind == (unsigned long)-1)
+//            std::cout << "nie je v tabulke bgp" << std::endl;
+//    }
+    std::cout<< "----------------------"  <<std::endl;
     //Don't add the route if it exists in PrefixListINTable or in ASListINTable
     if (isInTable(_prefixListIN, entry) != (unsigned long)-1 || isInASList(_ASListIN, entry)) {
         delete entry;
@@ -361,6 +375,11 @@ unsigned char Bgp::decisionProcess(const BgpUpdateMessage& msg, RoutingTableEntr
 
     entry->setInterface(_BGPSessions[sessionIndex]->getLinkIntf());
     _BGPRoutingTable.push_back(entry);
+
+    if (_BGPSessions[sessionIndex]->getType() == IGP) {
+        _rt->addRoute(entry);
+        std::cout<<entry->getSourceType()<<std::endl;
+    }
 
 //    RoutingTableEntry6 *entry6 = new RoutingTableEntry6();
 //
@@ -487,7 +506,7 @@ bool Bgp::checkExternalRoute(const Ipv4Route *route)
     bool returnValue = ospf->checkExternalRoute(OSPFRoute);
     return returnValue;
 }
-
+//parse input XML
 void Bgp::loadTimerConfig(cXMLElementList& timerConfig, simtime_t *delayTab)
 {
     for (auto & elem : timerConfig) {
@@ -642,20 +661,56 @@ std::vector<const char *> Bgp::loadASConfig(cXMLElementList& ASConfig)
     }
     return routerInSameASList;
 }
-
-void Bgp::loadConfigFromXML(cXMLElement *bgpConfig)
+void Bgp::routerIntfAndRouteConfig(cXMLElement *rtrConfig)
 {
+    cXMLElementList routeNodes = rtrConfig->getElementsByTagName("Route");
+    for (auto & elem : routeNodes) {
+        Ipv4Route *entry = new Ipv4Route;
+        entry->setDestination(Ipv4Address((elem)->getAttribute("destination")));
+        entry->setNetmask(Ipv4Address((elem)->getAttribute("netmask")));
+        entry->setInterface(_inft->getInterfaceByName((elem)->getAttribute("interface")));
+        entry->setMetric(0);
+        entry->setSourceType(IRoute::MANUAL);
+
+        _rt->addRoute(entry);
+    }
+
+}
+
+void Bgp::loadConfigFromXML(cXMLElement *bgpConfig, cXMLElement *config)
+{
+
     if (strcmp(bgpConfig->getTagName(), "BGPConfig"))
         throw cRuntimeError("Cannot read BGP configuration, unaccepted '%s' node at %s", bgpConfig->getTagName(), bgpConfig->getSourceLocation());
 
+    if (strcmp(config->getTagName(), "BGPConfig"))
+            throw cRuntimeError("Cannot read BGP configuration, unaccepted '%s' node at %s", config->getTagName(), config->getSourceLocation());
+
     // load bgp timer parameters informations
+//    simtime_t delayTab[NB_TIMERS];
+//    cXMLElement *paramNode = bgpConfig->getElementByPath("TimerParams");
+//    if (paramNode == nullptr)
+//        throw cRuntimeError("BGP Error: No configuration for BGP timer parameters");
+//
+//    cXMLElementList timerConfig = paramNode->getChildren();
+//    loadTimerConfig(timerConfig, delayTab);
+
     simtime_t delayTab[NB_TIMERS];
-    cXMLElement *paramNode = bgpConfig->getElementByPath("TimerParams");
+    cXMLElement *paramNode = config->getElementByPath("TimerParams");
     if (paramNode == nullptr)
         throw cRuntimeError("BGP Error: No configuration for BGP timer parameters");
-
     cXMLElementList timerConfig = paramNode->getChildren();
     loadTimerConfig(timerConfig, delayTab);
+
+    //get router configuration
+    cXMLElement *devicesNode = config->getElementByPath("Devices");
+    cXMLElementList routerList = devicesNode->getChildren();
+    for (auto & elem : routerList) {
+        if(strcmp((elem)->getAttribute("name"), getParentModule()->getName()) == 0){
+            routerIntfAndRouteConfig(elem);
+        }
+    }
+
 
     //find my AS
     cXMLElementList ASList = bgpConfig->getElementsByTagName("AS");

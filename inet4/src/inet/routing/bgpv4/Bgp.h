@@ -131,7 +131,7 @@ class INET_API Bgp : public cSimpleModule, public ILifecycle, public TcpSocket::
     std::vector<const char *> loadASConfig(cXMLElementList& ASConfig);
     void loadSessionConfig(cXMLElementList& sessionList, simtime_t *delayTab);
     void loadSessionConfig6(cXMLElementList& sessionList, simtime_t *delayTab);
-    void loadConfigFromXML(cXMLElement *bgpConfig);
+    void loadConfigFromXML(cXMLElement *bgpConfig, cXMLElement *config);
     AsId findMyAS(cXMLElementList& ASList, int& outRouterPosition);
     bool ospfExist(IIpv4RoutingTable *rtTable);
     void loadTimerConfig(cXMLElementList& timerConfig, simtime_t *delayTab);
@@ -143,6 +143,8 @@ class INET_API Bgp : public cSimpleModule, public ILifecycle, public TcpSocket::
     int isInInterfaceTable6(IInterfaceTable *rtTable, Ipv6Address addr);
     SessionId findIdFromSocketConnId(std::map<SessionId, BgpSession *> sessions, int connId);
     unsigned int calculateStartDelay(int rtListSize, unsigned char rtPosition, unsigned char rtPeerPosition);
+
+    void routerIntfAndRouteConfig(cXMLElement *rtrConfig);
 
     SocketMap _socketMap;
     AsId _myAS = 0;

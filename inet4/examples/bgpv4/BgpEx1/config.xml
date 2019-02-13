@@ -9,7 +9,7 @@
     </TimerParams>
     
     <Devices>
-    	<Router name="R1">
+    	<Router name="R1" id="100.0.1.1">
     		<Interfaces>
     			<Interface id="eth0">
     				<Ipv4 address="100.0.1.1" netmask="255.255.255.252" />
@@ -28,9 +28,10 @@
     				<Neighbor Addr="fd00:12:12::1/127" remote-as="200" />
     			</Address-family>
     		</Bgp>
+    		<Route destination='100.0.1.0' netmask='255.255.255.252' interface='eth0'/>
     	</Router>
     	
-    	<Router name="R2">
+    	<Router name="R2" id="200.0.2.1">
     		<Interfaces>
     			<Interface id="eth0">
     				<Ipv4 address="10.0.20.1" netmask="255.255.255.252" />
@@ -55,9 +56,11 @@
     				<Neighbor Addr="fd00:20:20::1/127" remote-as="200" />
     			</Address-family>	
     		</Bgp>	
+    		<Route destination='200.0.2.0' netmask='255.255.255.252' interface='eth2'/>
+			<Route destination='200.0.3.0' netmask='255.255.255.252' interface='eth0'/>
     	</Router>
     	
-    	<Router name="R3">
+    	<Router name="R3" id="200.0.3.1">
     		<Interfaces>
     			<Interface id="eth0">
     				<Ipv4 address="10.0.20.2" netmask="255.255.255.252" />
@@ -82,9 +85,11 @@
     				<Neighbor Addr="fd00:20:20::0/127" remote-as="200" />
     			</Address-family>	
     		</Bgp>
+    		<Route destination='200.0.2.0' netmask='255.255.255.252' interface='eth0'/>
+			<Route destination='200.0.3.0' netmask='255.255.255.252' interface='eth2'/>
     	</Router>
     	
-    	<Router name="R4">
+    	<Router name="R4" id="100.0.4.1">
     		<Interfaces>
     			<Interface id="eth0">
     				<Ipv4 address="100.0.4.1" netmask="255.255.255.252" />
@@ -103,6 +108,7 @@
     				<Neighbor Addr="fd00:23:23::0/127" remote-as="200" />
     			</Address-family>	
     		</Bgp>
+    		<Route destination='100.0.4.0' netmask='255.255.255.252' interface='eth0'/>
     	</Router>
     </Devices>
               
