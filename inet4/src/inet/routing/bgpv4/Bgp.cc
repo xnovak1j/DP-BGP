@@ -677,6 +677,23 @@ void Bgp::routerIntfAndRouteConfig(cXMLElement *rtrConfig)
 
 }
 
+void Bgp::loadBgpNodeConfig(cXMLElement *bgpNode)
+{
+    _myAS = atoi((bgpNode)->getAttribute("as"));
+
+    cXMLElementList afNodes = bgpNode->getElementsByTagName("Address-family");
+    for (auto & elem : afNodes) {
+        if(strcmp((elem)->getAttribute("id"), "Ipv4") == 0){
+            cXMLElementList networkNodes = elem->getElementsByTagName("Network");
+            for (auto & network : networkNodes) {
+                _networksToAdvertise.push_back(Ipv4Address((network)->getAttribute("Addr")));
+            }
+        }
+    }
+
+
+}
+
 void Bgp::loadConfigFromXML(cXMLElement *bgpConfig, cXMLElement *config)
 {
 
@@ -707,17 +724,26 @@ void Bgp::loadConfigFromXML(cXMLElement *bgpConfig, cXMLElement *config)
     cXMLElementList routerList = devicesNode->getChildren();
     for (auto & elem : routerList) {
         if(strcmp((elem)->getAttribute("name"), getParentModule()->getName()) == 0){
+            //todo set router ID from new config
+            //parse Interface and Route elements for specific router
             routerIntfAndRouteConfig(elem);
+            //parse Bgp parameter;
+            cXMLElement *bgpNode = elem->getElementByPath("Bgp");
+
+            loadBgpNodeConfig(bgpNode);
+
         }
     }
-
+    //std::cout << "device " << getParentModule()->getName() << " number netwroks to advertise: " << _networksToAdvertise.size() << std::endl;
 
     //find my AS
     cXMLElementList ASList = bgpConfig->getElementsByTagName("AS");
     int routerPosition;
-    _myAS = findMyAS(ASList, routerPosition);
+    AsId tmp = findMyAS(ASList, routerPosition);
     if (_myAS == 0)
         throw cRuntimeError("BGP Error:  No AS configuration for Router ID: %s", _rt->getRouterId().str().c_str());
+
+
 
     // load EGP Session informations
     cXMLElementList sessionList = bgpConfig->getElementsByTagName("Session");

@@ -77,6 +77,7 @@ class INET_API Bgp : public cSimpleModule, public ILifecycle, public TcpSocket::
     Ipv6RoutingTable *getIPRoutingTable6() { return _rt6; }
     std::vector<RoutingTableEntry *> getBGPRoutingTable() { return _BGPRoutingTable; }
     std::vector<RoutingTableEntry6 *> getBGPRoutingTable6() { return _BGPRoutingTable6; }
+    std::vector<Ipv4Address> getNetworksToAdvertise() { return _networksToAdvertise; }
     /**
      * \brief active listenSocket for a given session (used by fsm)
      */
@@ -145,6 +146,7 @@ class INET_API Bgp : public cSimpleModule, public ILifecycle, public TcpSocket::
     unsigned int calculateStartDelay(int rtListSize, unsigned char rtPosition, unsigned char rtPeerPosition);
 
     void routerIntfAndRouteConfig(cXMLElement *rtrConfig);
+    void loadBgpNodeConfig(cXMLElement *bgpNode);
 
     SocketMap _socketMap;
     AsId _myAS = 0;
@@ -164,6 +166,7 @@ class INET_API Bgp : public cSimpleModule, public ILifecycle, public TcpSocket::
     Ipv6RoutingTable *_rt6 = nullptr;
     typedef std::vector<RoutingTableEntry6 *> RoutingTableEntryVector6;
     RoutingTableEntryVector6 _BGPRoutingTable6;    // The BGP routing table for ipv6
+    std::vector<Ipv4Address> _networksToAdvertise;
 
 
     static const int BGP_TCP_CONNECT_VALID = 71;

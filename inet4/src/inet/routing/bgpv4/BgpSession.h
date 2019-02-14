@@ -75,6 +75,9 @@ class INET_API BgpSession : public cObject
     Ipv6Address getPeerAddr6() { return _info.peerAddr6; }
     Ipv6RoutingTable *getIPRoutingTable6() { return _bgpRouting.getIPRoutingTable6(); }
     std::vector<RoutingTableEntry6 *> getBGPRoutingTable6() { return _bgpRouting.getBGPRoutingTable6(); }
+    std::vector<Ipv4Address> getNetworksToAdvertise() { return _bgpRouting.getNetworksToAdvertise(); }
+    int isInRoutingTable(Ipv4Address network) { return _bgpRouting.isInRoutingTable( _bgpRouting.getIPRoutingTable(), network); }
+   // const char * getDeviceName() { return _bgpRouting.getParentModule()->getName(); }
 
   private:
     SessionInfo _info;

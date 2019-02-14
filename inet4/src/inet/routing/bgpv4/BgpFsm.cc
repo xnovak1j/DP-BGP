@@ -438,42 +438,49 @@ void Established::entry()
     const Ipv4Route *rtEntry;
     RoutingTableEntry *BGPEntry;
     IIpv4RoutingTable *IPRoutingTable = session.getIPRoutingTable();
+    std::vector<Ipv4Address> networksToAdvertise = session.getNetworksToAdvertise();
 
-    for (int i = 1; i < IPRoutingTable->getNumRoutes(); i++) {
-        rtEntry = IPRoutingTable->getRoute(i);
-        /*if (rtEntry->getNetmask() == Ipv4Address::ALLONES_ADDRESS ||
-            rtEntry->getSourceType() == IRoute::IFACENETMASK ||
-            rtEntry->getSourceType() == IRoute::MANUAL ||
-            rtEntry->getSourceType() == IRoute::BGP)
-        {
-            std::cout<<"odseknute start :"<<rtEntry<< " "<< i << " " <<rtEntry->getSourceType()<<std::endl;
-            continue;
-        }*/
+    //std::cout << "device " << session.getDeviceName() << " number networks to advertise: " << networksToAdvertise.size() << std::endl;
 
-        if(!(rtEntry->getSourceType() == IRoute::MANUAL && rtEntry->getMetric() == 0)) {
-            continue;
-        }
-
-        if (session.getType() == EGP) {
-
-            // actually not working with ospf
-           /* if (rtEntry->getSourceType() == IRoute::OSPF && session.checkExternalRoute(rtEntry)) {
-                std::cout<<"odseknute :"<<rtEntry<< " "<< i <<std::endl;
+    //for (int i = 1; i < IPRoutingTable->getNumRoutes(); i++) {
+    for (auto network : networksToAdvertise) {
+        int i = session.isInRoutingTable(network);
+        if(i != -1) {
+            rtEntry = IPRoutingTable->getRoute(i);
+            /*if (rtEntry->getNetmask() == Ipv4Address::ALLONES_ADDRESS ||
+                rtEntry->getSourceType() == IRoute::IFACENETMASK ||
+                rtEntry->getSourceType() == IRoute::MANUAL ||
+                rtEntry->getSourceType() == IRoute::BGP)
+            {
+                std::cout<<"odseknute start :"<<rtEntry<< " "<< i << " " <<rtEntry->getSourceType()<<std::endl;
                 continue;
             }*/
 
+            /*if(!(rtEntry->getSourceType() == IRoute::MANUAL && rtEntry->getMetric() == 0)) {
+                continue;
+            }*/
+
+            if (session.getType() == EGP) {
+
+                // actually not working with ospf
+               /* if (rtEntry->getSourceType() == IRoute::OSPF && session.checkExternalRoute(rtEntry)) {
+                    std::cout<<"odseknute :"<<rtEntry<< " "<< i <<std::endl;
+                    continue;
+                }*/
 
 
-                BGPEntry = new RoutingTableEntry(rtEntry);
-                //std::string entryh = rtEntry->getDestination().str();
-                //std::string entryn = rtEntry->getNetmask().str();
-                BGPEntry->addAS(session._info.ASValue);
-                session.updateSendProcess(BGPEntry);
 
-                std::cout<<"update :"<<rtEntry<< " "<< i <<std::endl;
+                    BGPEntry = new RoutingTableEntry(rtEntry);
+                    //std::string entryh = rtEntry->getDestination().str();
+                    //std::string entryn = rtEntry->getNetmask().str();
+                    BGPEntry->addAS(session._info.ASValue);
+                    session.updateSendProcess(BGPEntry);
 
-                delete BGPEntry;
+                    std::cout<<"update :"<<rtEntry<< " "<< i <<std::endl;
 
+                    delete BGPEntry;
+
+            }
         }
     }
 
