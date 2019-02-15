@@ -663,6 +663,36 @@ std::vector<const char *> Bgp::loadASConfig(cXMLElementList& ASConfig)
 }
 void Bgp::routerIntfAndRouteConfig(cXMLElement *rtrConfig)
 {
+    cXMLElementList interfaceList = rtrConfig->getElementsByTagName("Interface");
+
+    std::cout << "device " << getParentModule()->getName() << " interfaces : " << std::endl;
+    InterfaceEntry * myInterface;
+
+    for (auto & interface : interfaceList) {
+        //std::cout<< (interface)->getAttribute("id") << std::endl;
+        myInterface = (_inft->getInterfaceByName((interface)->getAttribute("id")));
+        Ipv4Address addr = (Ipv4Address(((interface)->getElementByPath("Ipv4"))->getAttribute("address")));
+        Ipv4Address mask = (Ipv4Address(((interface)->getElementByPath("Ipv4"))->getAttribute("netmask")));
+        Ipv4InterfaceData * intfData = new Ipv4InterfaceData();
+        intfData->setIPAddress(addr);
+        intfData->setNetmask(mask);
+        myInterface->setIpv4Data(intfData);
+
+        //add directly connected ip address to routing table
+        Ipv4Address networkAdd = (Ipv4Address((intfData->getIPAddress()).getInt() & (intfData->getNetmask()).getInt()));
+        //std::cout<<"intf data: " << intfData->getIPAddress() << " netmask :"<< intfData->getNetmask() << "network addr: " << networkAdd <<std::endl;
+        Ipv4Route *entry = new Ipv4Route;
+
+        entry->setDestination(networkAdd);
+        entry->setNetmask(intfData->getNetmask());
+        entry->setInterface(myInterface);
+        entry->setMetric(21);
+        entry->setSourceType(IRoute::IFACENETMASK);
+
+        _rt->addRoute(entry);
+
+    }
+    //add static routes to routing table
     cXMLElementList routeNodes = rtrConfig->getElementsByTagName("Route");
     for (auto & elem : routeNodes) {
         Ipv4Route *entry = new Ipv4Route;
