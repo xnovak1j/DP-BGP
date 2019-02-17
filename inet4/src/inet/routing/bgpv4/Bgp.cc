@@ -60,7 +60,7 @@ void Bgp::initialize(int stage)
         cXMLElement *config = par("config");
 
         // read BGP configuration
-        cXMLElement *bgpConfig = par("bgpConfig");
+        cXMLElement *bgpConfig; // = par("bgpConfig");
         loadConfigFromXML(bgpConfig, config);
         createWatch("myAutonomousSystem", _myAS);
         WATCH_PTRVECTOR(_BGPRoutingTable);
@@ -665,7 +665,7 @@ void Bgp::routerIntfAndRouteConfig(cXMLElement *rtrConfig)
 {
     cXMLElementList interfaceList = rtrConfig->getElementsByTagName("Interface");
 
-    std::cout << "device " << getParentModule()->getName() << " interfaces : " << std::endl;
+    //std::cout << "device " << getParentModule()->getName() << " interfaces : " << std::endl;
     InterfaceEntry * myInterface;
 
     for (auto & interface : interfaceList) {
@@ -707,28 +707,59 @@ void Bgp::routerIntfAndRouteConfig(cXMLElement *rtrConfig)
 
 }
 
-void Bgp::loadBgpNodeConfig(cXMLElement *bgpNode)
+std::vector<const char *> Bgp::loadBgpNodeConfig(cXMLElement *bgpNode, simtime_t *delayTab, int pos)
 {
+    std::vector<const char *> routerInSameASList;
+    //simtime_t saveStartDelay = delayTab[3];
     _myAS = atoi((bgpNode)->getAttribute("as"));
 
     cXMLElementList afNodes = bgpNode->getElementsByTagName("Address-family");
     for (auto & elem : afNodes) {
         if(strcmp((elem)->getAttribute("id"), "Ipv4") == 0){
             cXMLElementList networkNodes = elem->getElementsByTagName("Network");
+            cXMLElementList neighborNodes = elem->getElementsByTagName("Neighbor");
             for (auto & network : networkNodes) {
                 _networksToAdvertise.push_back(Ipv4Address((network)->getAttribute("Addr")));
+            }
+
+            for (auto & neighbor : neighborNodes) {
+                if (atoi((neighbor)->getAttribute("remote-as")) == _myAS) {
+                    routerInSameASList.push_back((neighbor)->getAttribute("Addr"));
+                } else {
+
+                    Ipv4Address peerAddr = Ipv4Address((neighbor)->getAttribute("Addr"));
+
+                    if((_rt->getInterfaceForDestAddr(peerAddr)->getIpv4Address()).getInt() < peerAddr.getInt()){
+                        delayTab[3] += pos;
+                    } else {
+                        delayTab[3] += pos + 0.5;
+                    }
+
+                    SessionId newSessionID = createSession(EGP, peerAddr.str().c_str());
+                    _BGPSessions[newSessionID]->setTimers(delayTab);
+                    TcpSocket *socketListenEGP = new TcpSocket();
+                    _BGPSessions[newSessionID]->setSocketListen(socketListenEGP);
+
+                }
             }
         }
     }
 
+    return routerInSameASList;
 
+}
+
+std::vector<const char *> Bgp::getRoutersInSameAS(cXMLElementList& BgpList)
+{
+    std::vector<const char *> routerInSameASList;
+    return routerInSameASList;
 }
 
 void Bgp::loadConfigFromXML(cXMLElement *bgpConfig, cXMLElement *config)
 {
 
-    if (strcmp(bgpConfig->getTagName(), "BGPConfig"))
-        throw cRuntimeError("Cannot read BGP configuration, unaccepted '%s' node at %s", bgpConfig->getTagName(), bgpConfig->getSourceLocation());
+   // if (strcmp(bgpConfig->getTagName(), "BGPConfig"))
+   //     throw cRuntimeError("Cannot read BGP configuration, unaccepted '%s' node at %s", bgpConfig->getTagName(), bgpConfig->getSourceLocation());
 
     if (strcmp(config->getTagName(), "BGPConfig"))
             throw cRuntimeError("Cannot read BGP configuration, unaccepted '%s' node at %s", config->getTagName(), config->getSourceLocation());
@@ -752,53 +783,74 @@ void Bgp::loadConfigFromXML(cXMLElement *bgpConfig, cXMLElement *config)
     //get router configuration
     cXMLElement *devicesNode = config->getElementByPath("Devices");
     cXMLElementList routerList = devicesNode->getChildren();
+    int routerPosition;
+
+    std::map<int, int> routerPositionMap;
+    std::vector<const char *> routerInSameASList;
+    int positionRouterInConfig = 1;
+    int myPos;
+
     for (auto & elem : routerList) {
+        routerPositionMap[atoi((elem->getElementByPath("Bgp"))->getAttribute("as"))]++;
+
         if(strcmp((elem)->getAttribute("name"), getParentModule()->getName()) == 0){
-            //todo set router ID from new config
+
+            // set router ID from new config
+            _rt->setRouterId(Ipv4Address((elem)->getAttribute("id")));
             //parse Interface and Route elements for specific router
             routerIntfAndRouteConfig(elem);
             //parse Bgp parameter;
             cXMLElement *bgpNode = elem->getElementByPath("Bgp");
-
-            loadBgpNodeConfig(bgpNode);
-
+            simtime_t saveStartDelay = delayTab[3];
+            routerInSameASList = loadBgpNodeConfig(bgpNode, delayTab, positionRouterInConfig);
+            delayTab[3] = saveStartDelay;
+            myPos = positionRouterInConfig;
+            routerPosition = routerPositionMap[_myAS];
         }
+        positionRouterInConfig++;
     }
-    //std::cout << "device " << getParentModule()->getName() << " number netwroks to advertise: " << _networksToAdvertise.size() << std::endl;
+    std::cout << "device " << getParentModule()->getName() << " number networks to advertise: " << _networksToAdvertise.size() <<" router position "<< routerPosition << "router in same as list "<< routerInSameASList.size() <<std::endl;
 
     //find my AS
-    cXMLElementList ASList = bgpConfig->getElementsByTagName("AS");
-    int routerPosition;
-    AsId tmp = findMyAS(ASList, routerPosition);
+    //cXMLElementList ASList = bgpConfig->getElementsByTagName("AS");
+    //int routerPosition;
+    //routerPosition = 0;
+    //AsId tmp = findMyAS(ASList, routerPosition);
     if (_myAS == 0)
         throw cRuntimeError("BGP Error:  No AS configuration for Router ID: %s", _rt->getRouterId().str().c_str());
+  //  std::cout << "device " << getParentModule()->getName() << " number networks to advertise: " << _networksToAdvertise.size() <<" router position"<< routerPosition <<std::endl;
 
+    /*create routerInSameAsMap and routerInDiffAsMap */
+
+
+   // cXMLElementList BgpList = config->getElementsByTagName("Bgp");
+   // routerInSameASList = getRoutersInSameAS(BgpList);
 
 
     // load EGP Session informations
-    cXMLElementList sessionList = bgpConfig->getElementsByTagName("Session");
-    simtime_t saveStartDelay = delayTab[3];
-    loadSessionConfig(sessionList, delayTab);
+   // cXMLElementList sessionList = bgpConfig->getElementsByTagName("Session");
+    //simtime_t saveStartDelay = delayTab[3];
+    //loadSessionConfig(sessionList, delayTab);
 //    cXMLElementList sessionList6 = bgpConfig->getElementsByTagName("Session6");
 //    loadSessionConfig6(sessionList6, delayTab);
-    delayTab[3] = saveStartDelay;
+    //delayTab[3] = saveStartDelay;
 
     // load AS information
-    char ASXPath[32];
-    sprintf(ASXPath, "AS[@id='%d']", _myAS);
+    //char ASXPath[32];
+    //sprintf(ASXPath, "AS[@id='%d']", _myAS);
 
-    cXMLElement *ASNode = bgpConfig->getElementByPath(ASXPath);
-    std::vector<const char *> routerInSameASList;
-    if (ASNode == nullptr)
-        throw cRuntimeError("BGP Error:  No configuration for AS ID: %d", _myAS);
+    //cXMLElement *ASNode = bgpConfig->getElementByPath(ASXPath);
+    //std::vector<const char *> routerInSameASList;
+    //if (ASNode == nullptr)
+   //     throw cRuntimeError("BGP Error:  No configuration for AS ID: %d", _myAS);
 
-    cXMLElementList ASConfig = ASNode->getChildren();
-    routerInSameASList = loadASConfig(ASConfig);
+   // cXMLElementList ASConfig = ASNode->getChildren();
+    //routerInSameASList = loadASConfig(ASConfig);
 
     //create IGP Session(s)
     if (routerInSameASList.size()) {
         unsigned int routerPeerPosition = 1;
-        delayTab[3] += sessionList.size() * 2;
+        delayTab[3] += myPos * 2;
         for (auto it = routerInSameASList.begin(); it != routerInSameASList.end(); it++, routerPeerPosition++) {
             SessionId newSessionID;
             TcpSocket *socketListenIGP = new TcpSocket();
