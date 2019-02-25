@@ -92,9 +92,9 @@ network BGPTest
             addSubnetRoutes = false;
         }
 
-        configurator6: Ipv6FlatNetworkConfigurator {
-            @display("p=150,20;is=s");
-        }
+ //       configurator6: Ipv6FlatNetworkConfigurator {
+//            @display("p=150,20;is=s");
+//        }
 
     connections:
         R1.ethg[1] <--> LINK_100 <--> R2.ethg[1];

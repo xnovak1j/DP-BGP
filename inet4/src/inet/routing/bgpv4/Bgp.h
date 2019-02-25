@@ -147,7 +147,6 @@ class INET_API Bgp : public cSimpleModule, public ILifecycle, public TcpSocket::
 
     void routerIntfAndRouteConfig(cXMLElement *rtrConfig);
     std::vector<const char *> loadBgpNodeConfig(cXMLElement *bgpNode, simtime_t *delayTab, int pos);
-    std::vector<const char *> getRoutersInSameAS(cXMLElementList& BgpList);
 
     SocketMap _socketMap;
     AsId _myAS = 0;
