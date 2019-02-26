@@ -38,8 +38,16 @@ void Idle::ManualStart()
     EV_INFO << "Processing Idle::event1" << std::endl;
     BgpSession& session = TopState::box().getModule();
 
-    std::cout << "++++++++++++++++++++Router session info Rid "<< session._info.routerID << std::endl;
-    std::cout << "+++++++++++++++++++Peer address"<< session.getPeerAddr() << std::endl;
+    if(session._info.multiAddress) {
+        std::cout << "--------------------Router session info Rid Ipv6 "<< session._info.routerID << std::endl;
+        std::cout << "--------------------Local address Ipv6 "<< session._info.localAddr6 << std::endl;
+        std::cout << "--------------------Peer address Ipv6 "<< session._info.peerAddr6 << std::endl;
+    } else {
+        std::cout << "++++++++++++++++++++Router session info Rid "<< session._info.routerID << std::endl;
+        std::cout << "++++++++++++++++++++Local address "<< session._info.localAddr << std::endl;
+        std::cout << "++++++++++++++++++++Peer address"<< session._info.peerAddr << std::endl;
+    }
+
 
 
     //In this state, BGP FSM refuses all incoming BGP connections for this peer.

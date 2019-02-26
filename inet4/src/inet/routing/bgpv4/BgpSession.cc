@@ -49,10 +49,14 @@ BgpSession::~BgpSession()
 
 void BgpSession::setInfo(SessionInfo info)
 {
+    _info.multiAddress = info.multiAddress;
+    _info.localAddr = info.localAddr;
+    _info.localAddr6 = info.localAddr6;
     _info.sessionType = info.sessionType;
     _info.ASValue = info.ASValue;
     _info.routerID = info.routerID;
     _info.peerAddr = info.peerAddr;
+    _info.peerAddr6 = info.peerAddr6;
     _info.sessionID = info.sessionID;
     _info.linkIntf = info.linkIntf;
     _info.socket = new TcpSocket();
