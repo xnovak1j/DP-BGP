@@ -63,6 +63,7 @@ class INET_API BgpSession : public cObject
     BgpSessionType getType() { return _info.sessionType; }
     InterfaceEntry *getLinkIntf() { return _info.linkIntf; }
     Ipv4Address getPeerAddr() { return _info.peerAddr; }
+    Ipv4Address getLocalAddr() { return _info.localAddr; }
     TcpSocket *getSocket() { return _info.socket; }
     TcpSocket *getSocketListen() { return _info.socketListen; }
     IIpv4RoutingTable *getIPRoutingTable() { return _bgpRouting.getIPRoutingTable(); }
@@ -73,6 +74,7 @@ class INET_API BgpSession : public cObject
 
     bool isMultiAddress() { return _info.multiAddress; }
     Ipv6Address getPeerAddr6() { return _info.peerAddr6; }
+    Ipv6Address getLocalAddr6() { return _info.localAddr6; }
     Ipv6RoutingTable *getIPRoutingTable6() { return _bgpRouting.getIPRoutingTable6(); }
     std::vector<RoutingTableEntry6 *> getBGPRoutingTable6() { return _bgpRouting.getBGPRoutingTable6(); }
     std::vector<Ipv4Address> getNetworksToAdvertise() { return _bgpRouting.getNetworksToAdvertise(); }

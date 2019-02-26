@@ -61,8 +61,9 @@ struct SessionInfo
     BgpSessionType sessionType = INCOMPLETE;
     AsId ASValue = 0;
     Ipv4Address routerID;
+    Ipv4Address localAddr;
     Ipv4Address peerAddr;
-    Ipv6Address routerID6;
+    Ipv6Address localAddr6;
     Ipv6Address peerAddr6;
     InterfaceEntry *linkIntf = nullptr;
     TcpSocket *socket = nullptr;

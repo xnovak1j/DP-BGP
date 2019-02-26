@@ -138,7 +138,7 @@ class INET_API Bgp : public cSimpleModule, public ILifecycle, public TcpSocket::
     bool ospfExist(IIpv4RoutingTable *rtTable);
     void loadTimerConfig(cXMLElementList& timerConfig, simtime_t *delayTab);
     unsigned char asLoopDetection(RoutingTableEntry *entry, AsId myAS);
-    SessionId findIdFromPeerAddr(std::map<SessionId, BgpSession *> sessions, Ipv4Address peerAddr);
+    SessionId findIdFromPeerAddr(std::map<SessionId, BgpSession *> sessions, L3Address peerAddr);
     int isInRoutingTable(IIpv4RoutingTable *rtTable, Ipv4Address addr);
     int isInInterfaceTable(IInterfaceTable *rtTable, Ipv4Address addr);
     int isInRoutingTable6(Ipv6RoutingTable *rtTable, Ipv6Address addr);
