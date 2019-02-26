@@ -26,7 +26,8 @@
     				<Network Addr="100.0.1.0" />
     			</Address-family>
     			<Address-family id="Ipv6">
-    				<Neighbor Addr="fd00:12:12::1/127" remote-as="200" />
+    				<Neighbor Addr="fd00:12:12::1" remote-as="200" />
+    				<Network Addr="fd00:100:0:100::" />
     			</Address-family>
     		</Bgp>
     	</Router>
@@ -54,8 +55,10 @@
     				<Network Addr="200.0.3.0" />
     			</Address-family>
     			<Address-family id="Ipv6">
-    				<Neighbor Addr="fd00:12:12::0/127" remote-as="100" />
-    				<Neighbor Addr="fd00:20:20::1/127" remote-as="200" />
+    				<Neighbor Addr="fd00:12:12::0" remote-as="100" />
+    				<Neighbor Addr="fd00:20:20::1" remote-as="200" />
+    				<Network Addr="fd00:200:0:200::" />
+    				<Network Addr="fd00:200:0:300::" />
     			</Address-family>	
     		</Bgp>	
 			<Route destination='200.0.3.0' netmask='255.255.255.252' interface='eth0'/>
@@ -85,8 +88,10 @@
     				<Network Addr="200.0.3.0" />
     			</Address-family>
     			<Address-family id="Ipv6">
-    				<Neighbor Addr="fd00:23:23::1/127" remote-as="300" />
-    				<Neighbor Addr="fd00:20:20::0/127" remote-as="200" />
+    				<Neighbor Addr="fd00:23:23::1" remote-as="300" />
+    				<Neighbor Addr="fd00:20:20::0" remote-as="200" />
+    				<Network Addr="fd00:200:0:200::" />
+    				<Network Addr="fd00:200:0:300::" />
     			</Address-family>	
     		</Bgp>
     		<Route destination='200.0.2.0' netmask='255.255.255.252' interface='eth0'/>
@@ -110,7 +115,8 @@
     				<Network Addr="100.0.4.0" />
     			</Address-family>
     			<Address-family id="Ipv6">
-    				<Neighbor Addr="fd00:23:23::0/127" remote-as="200" />
+    				<Neighbor Addr="fd00:23:23::0" remote-as="200" />
+    				<Network Addr="fd00:300:0:400::" />
     			</Address-family>	
     		</Bgp>
     	</Router>

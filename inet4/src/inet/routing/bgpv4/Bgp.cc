@@ -699,14 +699,8 @@ void Bgp::routerIntfAndRouteConfig(cXMLElement *rtrConfig)
         for (auto & ipv6Rec : ipv6List) {
             const char * addr6c = ipv6Rec->getAttribute("address");
 
-            //std::cout<< "ipv6------- " << addr6.str().c_str() << std::endl;
             std::string add6 = addr6c;
-
             std::string prefix6 = add6.substr(0, add6.find("/"));
-
-            //std::string length6 = add6.erase(0, add6.find("/") + 1);
-
-            //std::cout<< "prefix : " << prefix6 << " length : " << length6 << std::endl;
 
             Ipv6InterfaceData * intfData6 = myInterface->ipv6Data();
 
@@ -716,30 +710,20 @@ void Bgp::routerIntfAndRouteConfig(cXMLElement *rtrConfig)
                  throw cRuntimeError("Cannot parse Ipv6 address: '%s", addr6c);
 //                std::cout << "parsed prefix = " << prefLength << std::endl;
 
-
             address6 = Ipv6Address(prefix6.c_str());
-
-//            std::cout << "IPv6 : " << address6 << std::endl;
-//            std::cout << "IPv6 : " << address6.getPrefix(prefLength) << std::endl;
-            //std::cout << "getNumAddresses() = " << intfData6->getNumAddresses() << endl;
 
             Ipv6InterfaceData::AdvPrefix p;
             p.prefix = address6;
             p.prefixLength = prefLength;
-
             intfData6->addAdvPrefix(p);
 
             // add this routes to routing table
             for (int y = 0; y < intfData6->getNumAdvPrefixes(); y++)
                 if (intfData6->getAdvPrefix(y).prefix.isGlobal())
-                    _rt6->addOrUpdateOwnAdvPrefix(intfData6->getAdvPrefix(y).prefix,
+                    _rt6->addOrUpdateOwnAdvPrefix(intfData6->getAdvPrefix(y).prefix.getPrefix(prefLength),
                             intfData6->getAdvPrefix(y).prefixLength,
                             myInterface->getInterfaceId(), SIMTIME_ZERO);
-
         }
-
-
-
     }
     //add static routes to routing table
     cXMLElementList routeNodes = rtrConfig->getElementsByTagName("Route");
@@ -770,29 +754,20 @@ void Bgp::routerIntfAndRouteConfig(cXMLElement *rtrConfig)
         address6 = Ipv6Address(prefix6.c_str());
         Ipv6Address nextHop6 = (Ipv6Address(elem->getAttribute("nexthop")));
 
-
-//        entry->setDestination(address6);
-//        entry->setPrefixLength(prefLength);
-//        entry->setInterface(_inft->getInterfaceByName((elem)->getAttribute("interface")));
-//        entry->setMetric(0);
-//        entry->setSourceType(IRoute::MANUAL);
-
         _rt6->addStaticRoute(address6, prefLength,_inft->getInterfaceByName((elem)->getAttribute("interface"))->getInterfaceId(), nextHop6);
-
     }
-
 }
 
-std::vector<const char *> Bgp::loadBgpNodeConfig(cXMLElement *bgpNode, simtime_t *delayTab, int pos)
+void Bgp::loadBgpNodeConfig(cXMLElement *bgpNode, simtime_t *delayTab, int pos)
 {
-    std::vector<const char *> routerInSameASList;
+    //std::vector<const char *> routerInSameASList;
     //simtime_t saveStartDelay = delayTab[3];
     _myAS = atoi((bgpNode)->getAttribute("as"));
 
     cXMLElementList afNodes = bgpNode->getElementsByTagName("Address-family");
     for (auto & elem : afNodes) {
         //IPv4 address family
-        if(strcmp((elem)->getAttribute("id"), "Ipv4") == 0){
+        if(strcmp((elem)->getAttribute("id"), "Ipv4") == 0) {
             cXMLElementList networkNodes = elem->getElementsByTagName("Network");
             cXMLElementList neighborNodes = elem->getElementsByTagName("Neighbor");
             for (auto & network : networkNodes) {
@@ -801,7 +776,7 @@ std::vector<const char *> Bgp::loadBgpNodeConfig(cXMLElement *bgpNode, simtime_t
 
             for (auto & neighbor : neighborNodes) {
                 if (atoi((neighbor)->getAttribute("remote-as")) == _myAS) {
-                    routerInSameASList.push_back((neighbor)->getAttribute("Addr"));
+                    _routerInSameASList.push_back((neighbor)->getAttribute("Addr"));
                 } else {
                     //start EGP sessions
 
@@ -819,10 +794,35 @@ std::vector<const char *> Bgp::loadBgpNodeConfig(cXMLElement *bgpNode, simtime_t
                     _BGPSessions[newSessionID]->setSocketListen(socketListenEGP);
                 }
             }
+        } else if(strcmp((elem)->getAttribute("id"), "Ipv6") == 0) {
+            cXMLElementList networkNodes = elem->getElementsByTagName("Network");
+            cXMLElementList neighborNodes = elem->getElementsByTagName("Neighbor");
+            for (auto & network : networkNodes) {
+                _networksToAdvertise6.push_back(Ipv6Address((network)->getAttribute("Addr")));
+            }
+
+            for (auto & neighbor : neighborNodes) {
+                if (atoi((neighbor)->getAttribute("remote-as")) == _myAS) {
+                    _routerInSameASList6.push_back((neighbor)->getAttribute("Addr"));
+                } else {
+                    //start EGP sessions
+
+                    Ipv6Address peerAddr = Ipv6Address((neighbor)->getAttribute("Addr"));
+                   if(_rt6->getOutputInterfaceForDestination(peerAddr)->ipv6Data()->getAdvPrefix(0).prefix.compare(peerAddr) < 0){
+                       delayTab[3] += pos + 1;
+                   } else {
+                       delayTab[3] += pos + 1.5;
+                   }
+
+
+//                    SessionId newSessionID = createSession6(EGP, peerAddr.str().c_str());
+//                    _BGPSessions[newSessionID]->setTimers(delayTab);
+//                    TcpSocket *socketListenEGP = new TcpSocket();
+//                    _BGPSessions[newSessionID]->setSocketListen(socketListenEGP);
+                }
+            }
         }
     }
-
-    return routerInSameASList;
 }
 
 void Bgp::loadConfigFromXML(cXMLElement *bgpConfig, cXMLElement *config)
@@ -853,15 +853,16 @@ void Bgp::loadConfigFromXML(cXMLElement *bgpConfig, cXMLElement *config)
     //get router configuration
     cXMLElement *devicesNode = config->getElementByPath("Devices");
     cXMLElementList routerList = devicesNode->getChildren();
+    //odd position for ipv4, even for ipv6
     int routerPosition;
 
     std::map<int, int> routerPositionMap;   //count of the router in specific AS
-    std::vector<const char *> routerInSameASList; //vector of ip add of other routers in same as (internal peers)
+    //std::vector<const char *> routerInSameASList; //vector of ip add of other routers in same as (internal peers)
     int positionRouterInConfig = 1;
     int myPos;
 
     for (auto & elem : routerList) {
-        routerPositionMap[atoi((elem->getElementByPath("Bgp"))->getAttribute("as"))]++;
+        routerPositionMap[atoi((elem->getElementByPath("Bgp"))->getAttribute("as"))] += 2;
 
         if(strcmp((elem)->getAttribute("name"), getParentModule()->getName()) == 0){
 
@@ -872,15 +873,15 @@ void Bgp::loadConfigFromXML(cXMLElement *bgpConfig, cXMLElement *config)
             //parse Bgp parameter;
             cXMLElement *bgpNode = elem->getElementByPath("Bgp");
             simtime_t saveStartDelay = delayTab[3];
-            routerInSameASList = loadBgpNodeConfig(bgpNode, delayTab, positionRouterInConfig);
+            loadBgpNodeConfig(bgpNode, delayTab, positionRouterInConfig);
             delayTab[3] = saveStartDelay;
             myPos = positionRouterInConfig;
             routerPosition = routerPositionMap[_myAS];
         }
-        positionRouterInConfig++;
+        positionRouterInConfig += 2;
     }
-    //std::cout << "device " << getParentModule()->getName() << " number networks to advertise: " << _networksToAdvertise.size() <<" router position "<< routerPosition << "router in same as list "<< routerInSameASList.size() <<std::endl;
-
+    std::cout << "device " << getParentModule()->getName() << " number networks to advertise: " << _networksToAdvertise.size() <<" router position in AS "<< routerPosition-1 << " router pos in config " << myPos << " router in same as list "<< _routerInSameASList.size() <<std::endl;
+    std::cout << "device " << getParentModule()->getName() << " number networks to advertise: " << _networksToAdvertise6.size() <<" router position in AS "<< routerPosition << " router pos in config " << myPos+1 << " router in same as list6 "<< _routerInSameASList6.size() <<std::endl;
     //find my AS
     //cXMLElementList ASList = bgpConfig->getElementsByTagName("AS");
     //int routerPosition;
@@ -917,18 +918,32 @@ void Bgp::loadConfigFromXML(cXMLElement *bgpConfig, cXMLElement *config)
     //routerInSameASList = loadASConfig(ASConfig);
 
     //create IGP Session(s)
-    if (routerInSameASList.size()) {
+    if (_routerInSameASList.size()) {
         unsigned int routerPeerPosition = 1;
         delayTab[3] += myPos * 2;
-        for (auto it = routerInSameASList.begin(); it != routerInSameASList.end(); it++, routerPeerPosition++) {
+        for (auto it = _routerInSameASList.begin(); it != _routerInSameASList.end(); it++, routerPeerPosition++) {
             SessionId newSessionID;
             TcpSocket *socketListenIGP = new TcpSocket();
             newSessionID = createSession(IGP, (*it));
-            delayTab[3] += calculateStartDelay(routerInSameASList.size(), routerPosition, routerPeerPosition);
+            delayTab[3] += calculateStartDelay(_routerInSameASList.size(), routerPosition-1, routerPeerPosition);
             _BGPSessions[newSessionID]->setTimers(delayTab);
             _BGPSessions[newSessionID]->setSocketListen(socketListenIGP);
         }
     }
+    //create IGP sessions ipv6
+//    if (_routerInSameASList6.size()) {
+//            unsigned int routerPeerPosition = 1;
+//            delayTab[3] += (myPos+1) * 2;
+//            for (auto it = _routerInSameASList6.begin(); it != _routerInSameASList6.end(); it++, routerPeerPosition++) {
+//                SessionId newSessionID;
+//                TcpSocket *socketListenIGP = new TcpSocket();
+//                newSessionID = createSession6(IGP, (*it));
+//                delayTab[3] += calculateStartDelay(_routerInSameASList6.size(), routerPosition, routerPeerPosition);
+//                _BGPSessions[newSessionID]->setTimers(delayTab);
+//                _BGPSessions[newSessionID]->setSocketListen(socketListenIGP);
+//            }
+//        }
+
 }
 
 unsigned int Bgp::calculateStartDelay(int rtListSize, unsigned char rtPosition, unsigned char rtPeerPosition)
@@ -988,23 +1003,27 @@ SessionId Bgp::createSession6(BgpSessionType typeSession, const char *peerAddr)
     BgpSession *newSession = new BgpSession(*this);
     SessionId newSessionId;
     SessionInfo info;
-    uint32 d[4];
+    uint32 *d;
+    const uint32 *tmp;
 
     info.multiAddress = true;
     info.sessionType = typeSession;
     info.ASValue = _myAS;
-    //info.routerID6 = _rt6->getRouterIdAsGeneric();
+    info.routerID = _rt->getRouterId();
     info.peerAddr6.set(peerAddr);
     if (typeSession == EGP) {
-        info.linkIntf = _rt6->getInterfaceByAddress(info.peerAddr);
+        info.linkIntf = _rt6->getOutputInterfaceForDestination(info.peerAddr6);
         if (info.linkIntf == nullptr) {
             throw cRuntimeError("BGP Error: No configuration interface for peer address: %s", peerAddr);
         }
-//tu som skoncil
-        info.sessionID = info.peerAddr.getInt() + info.linkIntf->ipv4Data()->getIPAddress().getInt();
+        d = info.peerAddr6.words();
+        tmp = info.linkIntf->ipv6Data()->getAdvPrefix(0).prefix.words();
+
+        info.sessionID =  d[0] + d [3] + tmp[0] + tmp[3];
     }
     else {
-        info.sessionID = info.peerAddr.getInt() + info.routerID.getInt();
+        d = info.peerAddr6.words();
+        info.sessionID = d[0] + d [3] + info.routerID.getInt();
     }
     newSessionId = info.sessionID;
     newSession->setInfo(info);
