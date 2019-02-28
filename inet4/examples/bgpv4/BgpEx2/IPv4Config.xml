@@ -1,0 +1,20 @@
+<config>
+<!--	<interface hosts='R1' names='eth1' address='10.0.12.1' netmask='255.255.255.252'/>
+	<interface hosts='R2' names='eth1' address='10.0.12.2' netmask='255.255.255.252'/>
+	<interface hosts='R2' names='eth0' address='10.0.20.1' netmask='255.255.255.252'/>
+	<interface hosts='R3' names='eth0' address='10.0.20.2' netmask='255.255.255.252'/>	
+	<interface hosts='R3' names='eth1' address='10.0.23.1' netmask='255.255.255.252'/>
+	<interface hosts='R4' names='eth1' address='10.0.23.2' netmask='255.255.255.252'/>
+	<interface hosts='R1' names='eth0' address='100.0.1.1' netmask='255.255.255.252'/>
+	<interface hosts='R2' names='eth2' address='200.0.2.1' netmask='255.255.255.252'/>
+	<interface hosts='R3' names='eth2' address='200.0.3.1' netmask='255.255.255.252'/>
+	<interface hosts='R4' names='eth0' address='100.0.4.1' netmask='255.255.255.252'/> 
+	
+	
+	<interface hosts='H1' names='eth0' address='100.0.1.2' netmask='255.255.255.252'/>
+	<interface hosts='H2' names='eth0' address='200.0.2.2' netmask='255.255.255.252'/>
+	<interface hosts='H3' names='eth0' address='200.0.3.2' netmask='255.255.255.252'/>
+	<interface hosts='H4' names='eth0' address='100.0.4.2' netmask='255.255.255.252'/> 
+	
+	<route hosts='H*' destination='*' netmask='*' interface='eth0'/> -->
+</config>

@@ -178,7 +178,8 @@ void Bgp::openTCPConnectionToPeer(SessionId sessionID)
     socket->setUserData((void *)(uintptr_t)sessionID);
     socket->setOutputGate(gate("socketOut"));
     if(_BGPSessions[sessionID]->isMultiAddress()){
-        socket->bind(intfEntry->ipv6Data()->getAdvPrefix(0).prefix, 0);
+        socket->bind(intfEntry->ipv6Data()->getGlblAddress(), 0);
+        //socket->bind(intfEntry->ipv6Data()->getAdvPrefix(0).prefix, 0);
         socket->connect(_BGPSessions[sessionID]->getPeerAddr6(), TCP_PORT);
 
     } else {
@@ -734,17 +735,21 @@ void Bgp::routerIntfAndRouteConfig(cXMLElement *rtrConfig)
 
             address6 = Ipv6Address(prefix6.c_str());
 
+
+
             Ipv6InterfaceData::AdvPrefix p;
             p.prefix = address6;
             p.prefixLength = prefLength;
-            intfData6->addAdvPrefix(p);
+            //intfData6->addAdvPrefix(p);
+
+            intfData6->assignAddress(address6, false, SIMTIME_ZERO, SIMTIME_ZERO);
 
             // add this routes to routing table
-            for (int y = 0; y < intfData6->getNumAdvPrefixes(); y++)
-                if (intfData6->getAdvPrefix(y).prefix.isGlobal())
-                    _rt6->addOrUpdateOwnAdvPrefix(intfData6->getAdvPrefix(y).prefix.getPrefix(prefLength),
-                            intfData6->getAdvPrefix(y).prefixLength,
-                            myInterface->getInterfaceId(), SIMTIME_ZERO);
+            //for (int y = 0; y < intfData6->getNumAdvPrefixes(); y++)
+
+            _rt6->addOrUpdateOwnAdvPrefix(p.prefix.getPrefix(prefLength),
+                    p.prefixLength,
+                    myInterface->getInterfaceId(), SIMTIME_ZERO);
         }
     }
     //add static routes to routing table
@@ -810,10 +815,10 @@ void Bgp::loadBgpNodeConfig(cXMLElement *bgpNode, simtime_t *delayTab, int pos)
                         delayTab[3] += pos + 0.5;
                     }
 
-                    SessionId newSessionID = createSession(EGP, peerAddr.str().c_str());
-                    _BGPSessions[newSessionID]->setTimers(delayTab);
-                    TcpSocket *socketListenEGP = new TcpSocket();
-                    _BGPSessions[newSessionID]->setSocketListen(socketListenEGP);
+//                    SessionId newSessionID = createSession(EGP, peerAddr.str().c_str());
+//                    _BGPSessions[newSessionID]->setTimers(delayTab);
+//                    TcpSocket *socketListenEGP = new TcpSocket();
+//                    _BGPSessions[newSessionID]->setSocketListen(socketListenEGP);
                 }
             }
         } else if(strcmp((elem)->getAttribute("id"), "Ipv6") == 0) {
@@ -830,17 +835,19 @@ void Bgp::loadBgpNodeConfig(cXMLElement *bgpNode, simtime_t *delayTab, int pos)
                     //start EGP sessions
 
                     Ipv6Address peerAddr = Ipv6Address((neighbor)->getAttribute("Addr"));
-                   if(_rt6->getOutputInterfaceForDestination(peerAddr)->ipv6Data()->getAdvPrefix(0).prefix.compare(peerAddr) < 0){
+
+                   if(_rt6->getOutputInterfaceForDestination(peerAddr)->ipv6Data()->getGlblAddress().compare(peerAddr) < 0){
                        delayTab[3] += pos + 1;
                    } else {
                        delayTab[3] += pos + 1.5;
                    }
 
+                   //std::cout<<"delay " << delayTab[3] <<std::endl;
 
-                    SessionId newSessionID = createSession6(EGP, peerAddr.str().c_str());
-                    _BGPSessions[newSessionID]->setTimers(delayTab);
-                    TcpSocket *socketListenEGP = new TcpSocket();
-                    _BGPSessions[newSessionID]->setSocketListen(socketListenEGP);
+                   SessionId newSessionID = createSession6(EGP, peerAddr.str().c_str());
+                   _BGPSessions[newSessionID]->setTimers(delayTab);
+                   TcpSocket *socketListenEGP = new TcpSocket();
+                   _BGPSessions[newSessionID]->setSocketListen(socketListenEGP);
                 }
             }
         }
@@ -943,18 +950,18 @@ void Bgp::loadConfigFromXML(cXMLElement *bgpConfig, cXMLElement *config)
     //routerInSameASList = loadASConfig(ASConfig);
 
     //create IGP Session(s)
-    if (_routerInSameASList.size()) {
-        unsigned int routerPeerPosition = 1;
-        delayTab[3] += myPos * 2;
-        for (auto it = _routerInSameASList.begin(); it != _routerInSameASList.end(); it++, routerPeerPosition++) {
-            SessionId newSessionID;
-            TcpSocket *socketListenIGP = new TcpSocket();
-            newSessionID = createSession(IGP, (*it));
-            delayTab[3] += calculateStartDelay(_routerInSameASList.size(), routerPosition-1, routerPeerPosition);
-            _BGPSessions[newSessionID]->setTimers(delayTab);
-            _BGPSessions[newSessionID]->setSocketListen(socketListenIGP);
-        }
-    }
+//    if (_routerInSameASList.size()) {
+//        unsigned int routerPeerPosition = 1;
+//        delayTab[3] += myPos * 2;
+//        for (auto it = _routerInSameASList.begin(); it != _routerInSameASList.end(); it++, routerPeerPosition++) {
+//            SessionId newSessionID;
+//            TcpSocket *socketListenIGP = new TcpSocket();
+//            newSessionID = createSession(IGP, (*it));
+//            delayTab[3] += calculateStartDelay(_routerInSameASList.size(), routerPosition-1, routerPeerPosition);
+//            _BGPSessions[newSessionID]->setTimers(delayTab);
+//            _BGPSessions[newSessionID]->setSocketListen(socketListenIGP);
+//        }
+//    }
     //create IGP sessions ipv6
 //    if (_routerInSameASList6.size()) {
 //            unsigned int routerPeerPosition = 1;
@@ -1039,7 +1046,10 @@ SessionId Bgp::createSession6(BgpSessionType typeSession, const char *peerAddr)
     info.ASValue = _myAS;
     info.routerID = _rt->getRouterId();
     info.peerAddr6.set(peerAddr);
-    info.localAddr6 = _rt6->getOutputInterfaceForDestination(info.peerAddr6)->ipv6Data()->getAdvPrefix(0).prefix;
+    //info.localAddr6 = _rt6->getOutputInterfaceForDestination(info.peerAddr6)->ipv6Data()->getAdvPrefix(0).prefix;
+    info.localAddr6 = _rt6->getOutputInterfaceForDestination(info.peerAddr6)->ipv6Data()->getGlblAddress();
+
+    std::cout<<info.localAddr6 <<" my address" << std::endl;
 
     if (typeSession == EGP) {
         info.linkIntf = _rt6->getOutputInterfaceForDestination(info.peerAddr6);
@@ -1047,7 +1057,8 @@ SessionId Bgp::createSession6(BgpSessionType typeSession, const char *peerAddr)
             throw cRuntimeError("BGP Error: No configuration interface for peer address: %s", peerAddr);
         }
         d = info.peerAddr6.words();
-        tmp = info.linkIntf->ipv6Data()->getAdvPrefix(0).prefix.words();
+        //tmp = info.linkIntf->ipv6Data()->getAdvPrefix(0).prefix.words();
+        tmp = info.linkIntf->ipv6Data()->getGlblAddress().words();
 
         info.sessionID =  d[0] + d [3] + tmp[0] + tmp[3];
     }
