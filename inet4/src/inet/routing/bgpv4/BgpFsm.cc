@@ -387,6 +387,8 @@ void OpenConfirm::KeepaliveTimer_Expires()
 
 void OpenConfirm::TcpConnectionFails()
 {
+//    BgpSession& session = TopState::box().getModule();
+//    session.restartsConnectRetryTimer(false);
     /*xnovak1j -  If the local system receives a TcpConnectionFails event (Event 18)
       from the underlying TCP or a NOTIFICATION message (Event 25), the
       local system

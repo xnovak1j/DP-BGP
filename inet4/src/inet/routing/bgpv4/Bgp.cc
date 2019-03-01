@@ -267,9 +267,16 @@ void Bgp::socketDataArrived(TcpSocket *socket, Packet *msg, bool urgent)
                 case BGP_UPDATE:
                 {
                     std::cout<<"msg ptr: "<< ptrHdr << std::endl;
-                    const BgpUpdateMessage &a = *check_and_cast<const BgpUpdateMessage *>(ptrHdr.get());
-                    std::cout<< "NLRI: "<<a.getNLRI().prefix<<std::endl;
-                    processMessage(*check_and_cast<const BgpUpdateMessage *>(ptrHdr.get()));
+                    if(_BGPSessions[_currSessionId]->isMultiAddress()) {
+                        const BgpUpdateMessage6 &a = *check_and_cast<const BgpUpdateMessage6 *>(ptrHdr.get());
+                        std::cout<< "NLRI: "<<a.getPathAttributeList(0).getMpReachNlri().getMpReachNlriValue().getNLRI().prefix <<std::endl;
+                        processMessage(*check_and_cast<const BgpUpdateMessage6 *>(ptrHdr.get()));
+                    } else {
+                        const BgpUpdateMessage &a = *check_and_cast<const BgpUpdateMessage *>(ptrHdr.get());
+                        std::cout<< "NLRI: "<<a.getNLRI().prefix<<std::endl;
+                        processMessage(*check_and_cast<const BgpUpdateMessage *>(ptrHdr.get()));
+                    }
+
                     break;
                 }
                 default:
@@ -303,7 +310,7 @@ void Bgp::processMessage(const BgpKeepAliveMessage& msg)
 
 void Bgp::processMessage(const BgpUpdateMessage& msg)
 {
-    EV_INFO << "Processing BGP Update message" << std::endl;
+    EV_INFO << "Processing BGP Update 4 message" << std::endl;
     _BGPSessions[_currSessionId]->getFSM()->UpdateMsgEvent();
 
     unsigned char decisionProcessResult;
@@ -327,6 +334,39 @@ void Bgp::processMessage(const BgpUpdateMessage& msg)
         //RFC 4271, 9.2.  Update-Send Process
         if (decisionProcessResult != 0)
             updateSendProcess(decisionProcessResult, _currSessionId, entry);
+    }
+    else
+        delete entry;
+}
+
+void Bgp::processMessage(const BgpUpdateMessage6& msg)
+{
+    EV_INFO << "Processing BGP Update 6 message" << std::endl;
+    _BGPSessions[_currSessionId]->getFSM()->UpdateMsgEvent();
+
+    unsigned char decisionProcessResult;
+    RoutingTableEntry6 *entry = new RoutingTableEntry6();
+
+    const unsigned char length = msg.getPathAttributeList(0).getMpReachNlri().getMpReachNlriValue().getNLRI().length;
+    unsigned int ASValueCount = msg.getPathAttributeList(0).getAsPath(0).getValue(0).getAsValueArraySize();
+
+    entry->setDestination(msg.getPathAttributeList(0).getMpReachNlri().getMpReachNlriValue().getNLRI().prefix);
+    int prefLength = length;
+
+    entry->setPrefixLength(prefLength);
+
+    for (unsigned int j = 0; j < ASValueCount; j++) {
+        entry->addAS(msg.getPathAttributeList(0).getAsPath(0).getValue(0).getAsValue(j));
+    }
+
+    decisionProcessResult = asLoopDetection6(entry, _myAS);
+
+    if (decisionProcessResult == ASLOOP_NO_DETECTED) {
+        // RFC 4271, 9.1.  Decision Process
+        decisionProcessResult = decisionProcess6(msg, entry, _currSessionId);
+        //RFC 4271, 9.2.  Update-Send Process
+        if (decisionProcessResult != 0)
+            updateSendProcess6(decisionProcessResult, _currSessionId, entry);
     }
     else
         delete entry;
@@ -437,6 +477,100 @@ unsigned char Bgp::decisionProcess(const BgpUpdateMessage& msg, RoutingTableEntr
     return NEW_ROUTE_ADDED;     //FIXME model error: When returns NEW_ROUTE_ADDED then entry stored in _BGPRoutingTable, but sometimes not stored in _rt
 }
 
+unsigned char Bgp::decisionProcess6(const BgpUpdateMessage6& msg, RoutingTableEntry6 *entry, SessionId sessionIndex)
+{
+
+    std::cout<< "----------------------"  <<std::endl;
+    //Don't add the route if it exists in PrefixListINTable or in ASListINTable
+    if (isInTable6(_prefixListIN6, entry) != (unsigned long)-1 || isInASList6(_ASListIN6, entry)) {
+        delete entry;
+        return 0;
+    }
+
+    /*If the AS_PATH attribute of a BGP route contains an AS loop, the BGP
+       route should be excluded from the decision process. */
+    entry->setPathType(msg.getPathAttributeList(0).getOrigin().getValue());
+    entry->setNextHop(msg.getPathAttributeList(0).getMpReachNlri().getMpReachNlriValue().getNextHop().getValue());
+
+    //if the route already exist in BGP routing table, tieBreakingProcess();
+    //(RFC 4271: 9.1.2.2 Breaking Ties)
+    unsigned long BGPindex = isInTable6(_BGPRoutingTable6, entry);
+    if (BGPindex != (unsigned long)-1) {
+        if (tieBreakingProcess6(_BGPRoutingTable6[BGPindex], entry)) {
+            delete entry;
+            return 0;
+        }
+        else {
+            entry->setInterface(_BGPSessions[sessionIndex]->getLinkIntf());
+            _BGPRoutingTable6.push_back(entry);
+            _rt6->addRoutingProtocolRoute(entry);
+
+            return ROUTE_DESTINATION_CHANGED;
+        }
+    }
+
+    //Don't add the route if it exists in Ipv6 routing table except if the msg come from IGP session
+    int indexIP = isInRoutingTable6(_rt6, entry->getDestPrefix());
+    if (indexIP != -1 && _rt6->getRoute(indexIP)->getSourceType() != IRoute::BGP) {
+        if (_BGPSessions[sessionIndex]->getType() != IGP) {
+            delete entry;
+            return 0;
+        }
+        else {
+            Ipv6Route *oldEntry = _rt6->getRoute(indexIP);
+            Ipv6Route *newEntry = new Ipv6Route;
+            newEntry->setDestination(oldEntry->getDestPrefix());
+            newEntry->setPrefixLength(oldEntry->getPrefixLength());
+            newEntry->setNextHop(oldEntry->getNextHop());
+            newEntry->setInterface(oldEntry->getInterface());
+            newEntry->setSourceType(IRoute::BGP);
+            _rt6->deleteRoute(oldEntry);
+            _rt6->addRoutingProtocolRoute(newEntry);
+
+            //FIXME model error: the RoutingTableEntry *entry will be stored in _BGPRoutingTable, but not stored in _rt, memory leak
+            //FIXME model error: The entry inserted to _BGPRoutingTable, but newEntry inserted to _rt; entry and newEntry are differ.
+        }
+    }
+
+    entry->setInterface(_BGPSessions[sessionIndex]->getLinkIntf());
+    _BGPRoutingTable6.push_back(entry);
+
+    if (_BGPSessions[sessionIndex]->getType() == IGP) {
+        _rt6->addRoutingProtocolRoute(entry);
+        std::cout<<entry->getSourceType()<<std::endl;
+    }
+
+//    RoutingTableEntry6 *entry6 = new RoutingTableEntry6();
+//
+//    entry6->setDestination(entry->getInterface()->ipv6Data()->getAddress(0));
+//    entry6->setPrefixLength(62);
+//    entry6->setNextHop(entry->getInterface()->ipv6Data()->getAddress(1));
+//    entry6->setInterface(entry->getInterface());
+//    entry6->setPathType(msg.getPathAttributeList(0).getOrigin().getValue());
+//    for (int i = 0; i < entry->getASCount(); i++) {
+//        entry6->addAS(entry->getAS(i));
+//    }
+//    _BGPRoutingTable6.push_back(entry6);
+
+
+
+    if (_BGPSessions[sessionIndex]->getType() == EGP) {
+        _rt6->addRoutingProtocolRoute(entry);
+        //insertExternalRoute on OSPF ExternalRoutingTable if OSPF exist on this BGP router
+//        if (ospfExist(_rt)) {
+//            ospf::Ipv4AddressRange OSPFnetAddr;
+//            OSPFnetAddr.address = entry->getDestination();
+//            OSPFnetAddr.mask = entry->getNetmask();
+//            ospf::Ospf *ospf = getModuleFromPar<ospf::Ospf>(par("ospfRoutingModule"), this);
+//            InterfaceEntry *ie = entry->getInterface();
+//            if (!ie)
+//                throw cRuntimeError("Model error: interface entry is nullptr");
+//            ospf->insertExternalRoute(ie->getInterfaceId(), OSPFnetAddr);
+//        }
+    }
+    return NEW_ROUTE_ADDED;     //FIXME model error: When returns NEW_ROUTE_ADDED then entry stored in _BGPRoutingTable, but sometimes not stored in _rt
+}
+
 bool Bgp::tieBreakingProcess(RoutingTableEntry *oldEntry, RoutingTableEntry *entry)
 {
     /*a) Remove from consideration all routes that are not tied for
@@ -451,6 +585,25 @@ bool Bgp::tieBreakingProcess(RoutingTableEntry *oldEntry, RoutingTableEntry *ent
          having the lowest Origin number in their Origin attribute.*/
     if (entry->getPathType() < oldEntry->getPathType()) {
         deleteBGPRoutingEntry(oldEntry);
+        return false;
+    }
+    return true;
+}
+
+bool Bgp::tieBreakingProcess6(RoutingTableEntry6 *oldEntry, RoutingTableEntry6 *entry)
+{
+    /*a) Remove from consideration all routes that are not tied for
+         having the smallest number of AS numbers present in their
+         AS_PATH attributes.*/
+    if (entry->getASCount() < oldEntry->getASCount()) {
+        deleteBGPRoutingEntry6(oldEntry);
+        return false;
+    }
+
+    /* b) Remove from consideration all routes that are not tied for
+         having the lowest Origin number in their Origin attribute.*/
+    if (entry->getPathType() < oldEntry->getPathType()) {
+        deleteBGPRoutingEntry6(oldEntry);
         return false;
     }
     return true;
@@ -890,11 +1043,11 @@ void Bgp::loadBgpNodeConfig(cXMLElement *bgpNode, simtime_t *delayTab, int pos)
                     } else {
                         delayTab[3] += pos + 0.5;
                     }
-
-//                    SessionId newSessionID = createSession(EGP, peerAddr.str().c_str());
-//                    _BGPSessions[newSessionID]->setTimers(delayTab);
-//                    TcpSocket *socketListenEGP = new TcpSocket();
-//                    _BGPSessions[newSessionID]->setSocketListen(socketListenEGP);
+                    std::cout<<delayTab[3]<<" router IPV4 extern *************** " << getParentModule()->getName() << std::endl;
+                    SessionId newSessionID = createSession(EGP, peerAddr.str().c_str());
+                    _BGPSessions[newSessionID]->setTimers(delayTab);
+                    TcpSocket *socketListenEGP = new TcpSocket();
+                    _BGPSessions[newSessionID]->setSocketListen(socketListenEGP);
                 }
             }
         } else if(strcmp((elem)->getAttribute("id"), "Ipv6") == 0) {
@@ -919,7 +1072,7 @@ void Bgp::loadBgpNodeConfig(cXMLElement *bgpNode, simtime_t *delayTab, int pos)
                    }
 
                    //std::cout<<"delay " << delayTab[3] <<std::endl;
-
+                   std::cout<<delayTab[3]<<" router IPV6 extern *************** " << getParentModule()->getName() << std::endl;
                    SessionId newSessionID = createSession6(EGP, peerAddr.str().c_str());
                    _BGPSessions[newSessionID]->setTimers(delayTab);
                    TcpSocket *socketListenEGP = new TcpSocket();
@@ -940,13 +1093,6 @@ void Bgp::loadConfigFromXML(cXMLElement *bgpConfig, cXMLElement *config)
             throw cRuntimeError("Cannot read BGP configuration, unaccepted '%s' node at %s", config->getTagName(), config->getSourceLocation());
 
     // load bgp timer parameters informations
-//    simtime_t delayTab[NB_TIMERS];
-//    cXMLElement *paramNode = bgpConfig->getElementByPath("TimerParams");
-//    if (paramNode == nullptr)
-//        throw cRuntimeError("BGP Error: No configuration for BGP timer parameters");
-//
-//    cXMLElementList timerConfig = paramNode->getChildren();
-//    loadTimerConfig(timerConfig, delayTab);
 
     simtime_t delayTab[NB_TIMERS];
     cXMLElement *paramNode = config->getElementByPath("TimerParams");
@@ -970,7 +1116,7 @@ void Bgp::loadConfigFromXML(cXMLElement *bgpConfig, cXMLElement *config)
         cXMLElement *tmp = (elem)->getElementByPath("Bgp");
         int tmpAS = atoi((tmp)->getAttribute("as"));
        // std::cout<<tmpAS << std::endl;
-        routerPositionMap[tmpAS] += 2;
+        routerPositionMap[tmpAS]++;
 
         if(strcmp((elem)->getAttribute("name"), getParentModule()->getName()) == 0){
 
@@ -986,10 +1132,10 @@ void Bgp::loadConfigFromXML(cXMLElement *bgpConfig, cXMLElement *config)
             myPos = positionRouterInConfig;
             routerPosition = routerPositionMap[_myAS];
         }
-        positionRouterInConfig += 2;
+        positionRouterInConfig++;
     }
-    std::cout << "device " << getParentModule()->getName() << " number networks to advertise: " << _networksToAdvertise.size() <<" router position in AS "<< routerPosition-1 << " router pos in config " << myPos << " router in same as list "<< _routerInSameASList.size() <<std::endl;
-    std::cout << "device " << getParentModule()->getName() << " number networks to advertise: " << _networksToAdvertise6.size() <<" router position in AS "<< routerPosition << " router pos in config " << myPos+1 << " router in same as list6 "<< _routerInSameASList6.size() <<std::endl;
+    std::cout << "device " << getParentModule()->getName() << " number networks to advertise: " << _networksToAdvertise.size() <<" router position in AS "<< routerPosition << " router pos in config " << myPos << " router in same as list "<< _routerInSameASList.size() <<std::endl;
+    std::cout << "device " << getParentModule()->getName() << " number networks to advertise: " << _networksToAdvertise6.size() <<" router position in AS "<< routerPosition << " router pos in config " << myPos << " router in same as list6 "<< _routerInSameASList6.size() <<std::endl;
     //find my AS
     //cXMLElementList ASList = bgpConfig->getElementsByTagName("AS");
     //int routerPosition;
@@ -1026,31 +1172,40 @@ void Bgp::loadConfigFromXML(cXMLElement *bgpConfig, cXMLElement *config)
     //routerInSameASList = loadASConfig(ASConfig);
 
     //create IGP Session(s)
-//    if (_routerInSameASList.size()) {
-//        unsigned int routerPeerPosition = 1;
-//        delayTab[3] += myPos * 2;
-//        for (auto it = _routerInSameASList.begin(); it != _routerInSameASList.end(); it++, routerPeerPosition++) {
-//            SessionId newSessionID;
-//            TcpSocket *socketListenIGP = new TcpSocket();
-//            newSessionID = createSession(IGP, (*it));
-//            delayTab[3] += calculateStartDelay(_routerInSameASList.size(), routerPosition-1, routerPeerPosition);
-//            _BGPSessions[newSessionID]->setTimers(delayTab);
-//            _BGPSessions[newSessionID]->setSocketListen(socketListenIGP);
-//        }
-//    }
+    if (_routerInSameASList.size()) {
+        unsigned int routerPeerPosition = 1;
+        delayTab[3] += myPos * 2;
+        for (auto it = _routerInSameASList.begin(); it != _routerInSameASList.end(); it++, routerPeerPosition++) {
+            SessionId newSessionID;
+            TcpSocket *socketListenIGP = new TcpSocket();
+            newSessionID = createSession(IGP, (*it));
+            Ipv4Address tmp;
+            tmp.set((*it));
+            if(_rt->getRouterId().getInt() > tmp.getInt()){
+                delayTab[3] += 1;
+            }
+            delayTab[3] += calculateStartDelay(_routerInSameASList.size(), routerPosition, routerPeerPosition);
+
+            std::cout<<delayTab[3]<<" router -------------------------------------++++++ " << getParentModule()->getName() << std::endl;
+
+            _BGPSessions[newSessionID]->setTimers(delayTab);
+            _BGPSessions[newSessionID]->setSocketListen(socketListenIGP);
+        }
+    }
     //create IGP sessions ipv6
-//    if (_routerInSameASList6.size()) {
-//            unsigned int routerPeerPosition = 1;
-//            delayTab[3] += (myPos+1) * 2;
-//            for (auto it = _routerInSameASList6.begin(); it != _routerInSameASList6.end(); it++, routerPeerPosition++) {
-//                SessionId newSessionID;
-//                TcpSocket *socketListenIGP = new TcpSocket();
-//                newSessionID = createSession6(IGP, (*it));
-//                delayTab[3] += calculateStartDelay(_routerInSameASList6.size(), routerPosition, routerPeerPosition);
-//                _BGPSessions[newSessionID]->setTimers(delayTab);
-//                _BGPSessions[newSessionID]->setSocketListen(socketListenIGP);
-//            }
-//        }
+    if (_routerInSameASList6.size()) {
+            unsigned int routerPeerPosition = 1;
+            delayTab[3] += myPos * 4;
+            for (auto it = _routerInSameASList6.begin(); it != _routerInSameASList6.end(); it++, routerPeerPosition++) {
+                SessionId newSessionID;
+                TcpSocket *socketListenIGP = new TcpSocket();
+                newSessionID = createSession6(IGP, (*it));
+                delayTab[3] += calculateStartDelay(_routerInSameASList6.size(), routerPosition, routerPeerPosition);
+                std::cout<<delayTab[3]<<" router IPV6 inter *************** " << getParentModule()->getName() << std::endl;
+                _BGPSessions[newSessionID]->setTimers(delayTab);
+                _BGPSessions[newSessionID]->setSocketListen(socketListenIGP);
+            }
+        }
 
 }
 
@@ -1187,6 +1342,22 @@ bool Bgp::deleteBGPRoutingEntry(RoutingTableEntry *entry)
     return false;
 }
 
+bool Bgp::deleteBGPRoutingEntry6(RoutingTableEntry6 *entry)
+{
+    for (auto it = _BGPRoutingTable6.begin();
+         it != _BGPRoutingTable6.end(); it++)
+    {
+        if (((*it)->getDestPrefix().getPrefix((*it)->getPrefixLength())) ==
+            (entry->getDestPrefix().getPrefix(entry->getPrefixLength())))
+        {
+            _BGPRoutingTable6.erase(it);
+            _rt6->deleteRoute(entry);
+            return true;
+        }
+    }
+    return false;
+}
+
 /*return index of the Ipv4 table if the route is found, -1 else*/
 int Bgp::isInRoutingTable(IIpv4RoutingTable *rtTable, Ipv4Address addr)
 {
@@ -1316,6 +1487,16 @@ unsigned char Bgp::asLoopDetection(RoutingTableEntry *entry, AsId myAS)
     return ASLOOP_NO_DETECTED;
 }
 
+unsigned char Bgp::asLoopDetection6(RoutingTableEntry6 *entry, AsId myAS)
+{
+    for (unsigned int i = 1; i < entry->getASCount(); i++) {
+        if (myAS == entry->getAS(i)) {
+            return ASLOOP_DETECTED;
+        }
+    }
+    return ASLOOP_NO_DETECTED;
+}
+
 /*return sessionID if the session is found, -1 else*/
 SessionId Bgp::findNextSession(BgpSessionType type, bool startSession)
 {
@@ -1329,13 +1510,13 @@ SessionId Bgp::findNextSession(BgpSessionType type, bool startSession)
     }
     if (startSession == true && type == IGP && sessionID != static_cast<SessionId>(-1)) {
         InterfaceEntry *linkIntf;
-        if (_BGPSessions[sessionID]->isEstablished())
+        if (_BGPSessions[sessionID]->isMultiAddress())
             linkIntf = _rt6->getOutputInterfaceForDestination(_BGPSessions[sessionID]->getPeerAddr6());
         else
             linkIntf = _rt->getInterfaceForDestAddr(_BGPSessions[sessionID]->getPeerAddr());
 
         if (linkIntf == nullptr) {
-            if (_BGPSessions[sessionID]->isEstablished())
+            if (_BGPSessions[sessionID]->isMultiAddress())
                 throw cRuntimeError("No configuration interface for peer address: %s", _BGPSessions[sessionID]->getPeerAddr6().str().c_str());
             else
                 throw cRuntimeError("No configuration interface for peer address: %s", _BGPSessions[sessionID]->getPeerAddr().str().c_str());

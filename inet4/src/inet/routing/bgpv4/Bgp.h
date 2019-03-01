@@ -111,14 +111,17 @@ class INET_API Bgp : public cSimpleModule, public ILifecycle, public TcpSocket::
     void processMessage(const BgpOpenMessage& msg);
     void processMessage(const BgpKeepAliveMessage& msg);
     void processMessage(const BgpUpdateMessage& msg);
+    void processMessage(const BgpUpdateMessage6& msg);
 
     bool deleteBGPRoutingEntry(RoutingTableEntry *entry);
+    bool deleteBGPRoutingEntry6(RoutingTableEntry6 *entry);
     /**
      * \brief RFC 4271: 9.1. : Decision Process used when an UPDATE message is received
      *  As matches, routes are sent or not to UpdateSentProcess
      *  The result can be ROUTE_DESTINATION_CHANGED, NEW_ROUTE_ADDED or 0 if no routingTable modification
      */
     unsigned char decisionProcess(const BgpUpdateMessage& msg, RoutingTableEntry *entry, SessionId sessionIndex);
+    unsigned char decisionProcess6(const BgpUpdateMessage6& msg, RoutingTableEntry6 *entry, SessionId sessionIndex);
     /**
      * \brief RFC 4271: 9.1.2.2 Breaking Ties used when BGP speaker may have several routes
      *  to the same destination that have the same degree of preference.
@@ -126,6 +129,7 @@ class INET_API Bgp : public cSimpleModule, public ILifecycle, public TcpSocket::
      * \return bool, true if this process changed the route, false else
      */
     bool tieBreakingProcess(RoutingTableEntry *oldEntry, RoutingTableEntry *entry);
+    bool tieBreakingProcess6(RoutingTableEntry6 *oldEntry, RoutingTableEntry6 *entry);
 
     SessionId createSession(BgpSessionType typeSession, const char *peerAddr);
     SessionId createSession6(BgpSessionType typeSession, const char *peerAddr);
@@ -142,6 +146,7 @@ class INET_API Bgp : public cSimpleModule, public ILifecycle, public TcpSocket::
     bool ospfExist(IIpv4RoutingTable *rtTable);
     void loadTimerConfig(cXMLElementList& timerConfig, simtime_t *delayTab);
     unsigned char asLoopDetection(RoutingTableEntry *entry, AsId myAS);
+    unsigned char asLoopDetection6(RoutingTableEntry6 *entry, AsId myAS);
     SessionId findIdFromPeerAddr(std::map<SessionId, BgpSession *> sessions, L3Address peerAddr);
     int isInRoutingTable(IIpv4RoutingTable *rtTable, Ipv4Address addr);
     int isInInterfaceTable(IInterfaceTable *rtTable, Ipv4Address addr);

@@ -48,6 +48,7 @@ class INET_API BgpSession : public cObject
     void listenConnectionFromPeer() { _bgpRouting.listenConnectionFromPeer(_info.sessionID); }
     void openTCPConnectionToPeer() { _bgpRouting.openTCPConnectionToPeer(_info.sessionID); }
     SessionId findAndStartNextSession(BgpSessionType type) { return _bgpRouting.findNextSession(type, true); }
+    SessionId findAndStartNextSessionTmp(BgpSessionType type) { return _bgpRouting.findNextSession(type, false); }
 
     //setters for creating and editing the information in the Bgp session:
     void setInfo(SessionInfo info);
