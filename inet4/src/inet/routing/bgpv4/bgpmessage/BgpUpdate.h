@@ -37,6 +37,18 @@ class INET_API BgpUpdateMessage : public BgpUpdateMessage_Base
     void setNLRI(const BgpUpdateNlri& NLRI_var) override;
 };
 
+class INET_API BgpUpdateMessage6 : public BgpUpdateMessage6_Base
+{
+  protected:
+    unsigned short computePathAttributesBytes(const BgpUpdatePathAttributeList6& pathAttrs);
+
+  public:
+    BgpUpdateMessage6() : BgpUpdateMessage6_Base() {}
+    virtual BgpUpdateMessage6 *dup() const override { return new BgpUpdateMessage6(*this); }
+    void setWithdrawnRoutesArraySize(size_t size) override;
+    void setPathAttributeList(const BgpUpdatePathAttributeList6& pathAttributeList_var);
+};
+
 } // namespace bgp
 
 } // namespace inet

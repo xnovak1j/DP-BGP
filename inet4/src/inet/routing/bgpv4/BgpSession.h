@@ -71,6 +71,7 @@ class INET_API BgpSession : public cObject
     Macho::Machine<fsm::TopState>& getFSM() { return *_fsm; }
     bool checkExternalRoute(const Ipv4Route *ospfRoute) { return _bgpRouting.checkExternalRoute(ospfRoute); }
     void updateSendProcess(RoutingTableEntry *entry) { return _bgpRouting.updateSendProcess(NEW_SESSION_ESTABLISHED, _info.sessionID, entry); }
+    void updateSendProcess6(RoutingTableEntry6 *entry) { return _bgpRouting.updateSendProcess6(NEW_SESSION_ESTABLISHED, _info.sessionID, entry); }
 
     bool isMultiAddress() { return _info.multiAddress; }
     Ipv6Address getPeerAddr6() { return _info.peerAddr6; }
@@ -80,7 +81,8 @@ class INET_API BgpSession : public cObject
     std::vector<Ipv4Address> getNetworksToAdvertise() { return _bgpRouting.getNetworksToAdvertise(); }
     std::vector<Ipv6Address> getNetworksToAdvertise6() { return _bgpRouting.getNetworksToAdvertise6(); }
     int isInRoutingTable(Ipv4Address network) { return _bgpRouting.isInRoutingTable( _bgpRouting.getIPRoutingTable(), network); }
-   // const char * getDeviceName() { return _bgpRouting.getParentModule()->getName(); }
+    int isInRoutingTable6(Ipv6Address network) { return _bgpRouting.isInRoutingTable6( _bgpRouting.getIPRoutingTable6(), network); }
+    // const char * getDeviceName() { return _bgpRouting.getParentModule()->getName(); }
 
   private:
     SessionInfo _info;

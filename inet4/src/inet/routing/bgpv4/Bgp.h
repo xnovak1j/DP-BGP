@@ -91,6 +91,8 @@ class INET_API Bgp : public cSimpleModule, public ILifecycle, public TcpSocket::
      * \brief RFC 4271, 9.2 : Update-Send Process / Sent or not new UPDATE messages to its peers
      */
     void updateSendProcess(const unsigned char decisionProcessResult, SessionId sessionIndex, RoutingTableEntry *entry);
+
+    void updateSendProcess6(const unsigned char decisionProcessResult, SessionId sessionIndex, RoutingTableEntry6 *entry);
     /**
      * \brief find the next SessionId compared to his type and start this session if boolean is true
      */
@@ -128,7 +130,9 @@ class INET_API Bgp : public cSimpleModule, public ILifecycle, public TcpSocket::
     SessionId createSession(BgpSessionType typeSession, const char *peerAddr);
     SessionId createSession6(BgpSessionType typeSession, const char *peerAddr);
     bool isInASList(std::vector<AsId> ASList, RoutingTableEntry *entry);
+    bool isInASList6(std::vector<AsId> ASList, RoutingTableEntry6 *entry);
     unsigned long isInTable(std::vector<RoutingTableEntry *> rtTable, RoutingTableEntry *entry);
+    unsigned long isInTable6(std::vector<RoutingTableEntry6 *> rtTable, RoutingTableEntry6 *entry);
 
     std::vector<const char *> loadASConfig(cXMLElementList& ASConfig);
     void loadSessionConfig(cXMLElementList& sessionList, simtime_t *delayTab);
@@ -167,6 +171,12 @@ class INET_API Bgp : public cSimpleModule, public ILifecycle, public TcpSocket::
     Ipv6RoutingTable *_rt6 = nullptr;
     typedef std::vector<RoutingTableEntry6 *> RoutingTableEntryVector6;
     RoutingTableEntryVector6 _BGPRoutingTable6;    // The BGP routing table for ipv6
+    RoutingTableEntryVector6 _prefixListIN6;
+    RoutingTableEntryVector6 _prefixListOUT6;
+    RoutingTableEntryVector6 _prefixListINOUT6;
+    std::vector<AsId> _ASListIN6;
+    std::vector<AsId> _ASListOUT6;
+
     std::vector<Ipv4Address> _networksToAdvertise;
     std::vector<Ipv6Address> _networksToAdvertise6;
     std::vector<const char *> _routerInSameASList;

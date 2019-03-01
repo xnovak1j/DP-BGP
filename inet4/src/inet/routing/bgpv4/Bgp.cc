@@ -60,7 +60,7 @@ void Bgp::initialize(int stage)
         cXMLElement *config = par("config");
 
         // read BGP configuration
-        cXMLElement *bgpConfig; // = par("bgpConfig");
+        cXMLElement *bgpConfig = nullptr; // = par("bgpConfig");
         loadConfigFromXML(bgpConfig, config);
         createWatch("myAutonomousSystem", _myAS);
         WATCH_PTRVECTOR(_BGPRoutingTable);
@@ -465,57 +465,136 @@ void Bgp::updateSendProcess(const unsigned char type, SessionId sessionIndex, Ro
     //if it is not the currentSession and if the session is already established
     for (auto & elem : _BGPSessions)
     {
-        if (isInTable(_prefixListOUT, entry) != (unsigned long)-1 || isInASList(_ASListOUT, entry) ||
-            ((elem).first == sessionIndex && type != NEW_SESSION_ESTABLISHED) ||
-            (type == NEW_SESSION_ESTABLISHED && (elem).first != sessionIndex) ||
-            !(elem).second->isEstablished())
-        {
-            continue;
-        }
-        if ((_BGPSessions[sessionIndex]->getType() == IGP && (elem).second->getType() == EGP) ||
-            _BGPSessions[sessionIndex]->getType() == EGP ||
-            type == ROUTE_DESTINATION_CHANGED ||
-            type == NEW_SESSION_ESTABLISHED)
-        {
-            BgpUpdateNlri NLRI;
-            BgpUpdatePathAttributeList content;
-
-            unsigned int nbAS = entry->getASCount();
-            content.setAsPathArraySize(1);
-            content.getAsPathForUpdate(0).setValueArraySize(1);
-            content.getAsPathForUpdate(0).getValueForUpdate(0).setType(AS_SEQUENCE);
-            //RFC 4271 : set My AS in first position if it is not already
-            if (entry->getAS(0) != _myAS) {
-                content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValueArraySize(nbAS + 1);
-                content.getAsPathForUpdate(0).getValueForUpdate(0).setLength(1);
-                content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(0, _myAS);
-                for (unsigned int j = 1; j < nbAS + 1; j++) {
-                    content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(j, entry->getAS(j - 1));
-                }
-            }
-            else {
-                content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValueArraySize(nbAS);
-                content.getAsPathForUpdate(0).getValueForUpdate(0).setLength(1);
-                for (unsigned int j = 0; j < nbAS; j++) {
-                    content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(j, entry->getAS(j));
-                }
-            }
-
-            InterfaceEntry *iftEntry = (elem).second->getLinkIntf();
-            content.getOriginForUpdate().setValue((elem).second->getType());
-            content.getNextHopForUpdate().setValue(iftEntry->ipv4Data()->getIPAddress());
-            Ipv4Address netMask = entry->getNetmask();
-            NLRI.prefix = entry->getDestination().doAnd(netMask);
-            NLRI.length = (unsigned char)netMask.getNetmaskLength();
+        if((elem).second->isMultiAddress() == false) {
+            if (isInTable(_prefixListOUT, entry) != (unsigned long)-1 || isInASList(_ASListOUT, entry) ||
+                ((elem).first == sessionIndex && type != NEW_SESSION_ESTABLISHED) ||
+                (type == NEW_SESSION_ESTABLISHED && (elem).first != sessionIndex) ||
+                !(elem).second->isEstablished())
             {
-                Packet *pk = new Packet("BgpUpdate");
-                const auto& updateMsg = makeShared<BgpUpdateMessage>();
-                updateMsg->setPathAttributeListArraySize(1);
-                updateMsg->setPathAttributeList(content);
-                updateMsg->setNLRI(NLRI);
-                pk->insertAtFront(updateMsg);
-                (elem).second->getSocket()->send(pk);
-                (elem).second->addUpdateMsgSent();
+                continue;
+            }
+            if ((_BGPSessions[sessionIndex]->getType() == IGP && (elem).second->getType() == EGP) ||
+                _BGPSessions[sessionIndex]->getType() == EGP ||
+                type == ROUTE_DESTINATION_CHANGED ||
+                type == NEW_SESSION_ESTABLISHED)
+            {
+                BgpUpdateNlri NLRI;
+                BgpUpdatePathAttributeList content;
+
+                unsigned int nbAS = entry->getASCount();
+                content.setAsPathArraySize(1);
+                content.getAsPathForUpdate(0).setValueArraySize(1);
+                content.getAsPathForUpdate(0).getValueForUpdate(0).setType(AS_SEQUENCE);
+                //RFC 4271 : set My AS in first position if it is not already
+                if (entry->getAS(0) != _myAS) {
+                    content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValueArraySize(nbAS + 1);
+                    content.getAsPathForUpdate(0).getValueForUpdate(0).setLength(1);
+                    content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(0, _myAS);
+                    for (unsigned int j = 1; j < nbAS + 1; j++) {
+                        content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(j, entry->getAS(j - 1));
+                    }
+                }
+                else {
+                    content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValueArraySize(nbAS);
+                    content.getAsPathForUpdate(0).getValueForUpdate(0).setLength(1);
+                    for (unsigned int j = 0; j < nbAS; j++) {
+                        content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(j, entry->getAS(j));
+                    }
+                }
+
+                InterfaceEntry *iftEntry = (elem).second->getLinkIntf();
+                content.getOriginForUpdate().setValue((elem).second->getType());
+                content.getNextHopForUpdate().setValue(iftEntry->ipv4Data()->getIPAddress());
+                Ipv4Address netMask = entry->getNetmask();
+                NLRI.prefix = entry->getDestination().doAnd(netMask);
+                NLRI.length = (unsigned char)netMask.getNetmaskLength();
+                {
+                    Packet *pk = new Packet("BgpUpdate");
+                    const auto& updateMsg = makeShared<BgpUpdateMessage>();
+                    updateMsg->setPathAttributeListArraySize(1);
+                    updateMsg->setPathAttributeList(content);
+                    updateMsg->setNLRI(NLRI);
+                    pk->insertAtFront(updateMsg);
+                    (elem).second->getSocket()->send(pk);
+                    (elem).second->addUpdateMsgSent();
+                }
+            }
+        }
+    }
+}
+
+void Bgp::updateSendProcess6(const unsigned char type, SessionId sessionIndex, RoutingTableEntry6 *entry)
+{
+    //Don't send the update Message if the route exists in listOUTTable
+    //SESSION = EGP : send an update message to all BGP Peer (EGP && IGP)
+    //if it is not the currentSession and if the session is already established
+    //SESSION = IGP : send an update message to External BGP Peer (EGP) only
+    //if it is not the currentSession and if the session is already established
+    for (auto & elem : _BGPSessions)
+    {
+        if((elem).second->isMultiAddress()) {
+            if (isInTable6(_prefixListOUT6, entry) != (unsigned long)-1 || isInASList6(_ASListOUT6, entry) ||
+                ((elem).first == sessionIndex && type != NEW_SESSION_ESTABLISHED) ||
+                (type == NEW_SESSION_ESTABLISHED && (elem).first != sessionIndex) ||
+                !(elem).second->isEstablished())
+            {
+                continue;
+            }
+            if ((_BGPSessions[sessionIndex]->getType() == IGP && (elem).second->getType() == EGP) ||
+                _BGPSessions[sessionIndex]->getType() == EGP ||
+                type == ROUTE_DESTINATION_CHANGED ||
+                type == NEW_SESSION_ESTABLISHED)
+            {
+                BgpUpdateNlri6 NLRI;
+                BgpUpdatePathAttributeList6 content;
+
+                unsigned int nbAS = entry->getASCount();
+                //AS PATH
+                content.setAsPathArraySize(1);
+                content.getAsPathForUpdate(0).setValueArraySize(1);
+                content.getAsPathForUpdate(0).getValueForUpdate(0).setType(AS_SEQUENCE);
+
+                //RFC 4271 : set My AS in first position if it is not already
+                if (entry->getAS(0) != _myAS) {
+                    content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValueArraySize(nbAS + 1);
+                    content.getAsPathForUpdate(0).getValueForUpdate(0).setLength(1);
+                    content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(0, _myAS);
+                    for (unsigned int j = 1; j < nbAS + 1; j++) {
+                        content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(j, entry->getAS(j - 1));
+                    }
+                }
+                else {
+                    content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValueArraySize(nbAS);
+                    content.getAsPathForUpdate(0).getValueForUpdate(0).setLength(1);
+                    for (unsigned int j = 0; j < nbAS; j++) {
+                        content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(j, entry->getAS(j));
+                    }
+                }
+                unsigned char prefLength = (unsigned char)entry->getPrefixLength();
+                NLRI.prefix = entry->getDestPrefix();
+                NLRI.length = prefLength;
+
+                //origin
+                InterfaceEntry *iftEntry = (elem).second->getLinkIntf();
+                content.getOriginForUpdate().setValue((elem).second->getType());
+                //MP reach NLRI
+                content.getMpReachNlriForUpdate().setLength(39);
+                //next hop
+                content.getMpReachNlriForUpdate().getMpReachNlriValueForUpdate().getNextHopForUpdate().setValue(iftEntry->ipv6Data()->getGlblAddress());
+                //nlri
+                content.getMpReachNlriForUpdate().getMpReachNlriValueForUpdate().setNLRI(NLRI);
+
+                {
+                    Packet *pk = new Packet("BgpUpdate");
+                    const auto& updateMsg = makeShared<BgpUpdateMessage6>();
+                    updateMsg->setPathAttributeListArraySize(1);
+                    updateMsg->setPathAttributeList(content);
+
+                    //updateMsg->setNLRI(NLRI);
+                    pk->insertAtFront(updateMsg);
+                    (elem).second->getSocket()->send(pk);
+                    (elem).second->addUpdateMsgSent();
+                }
             }
         }
     }
@@ -735,8 +814,6 @@ void Bgp::routerIntfAndRouteConfig(cXMLElement *rtrConfig)
 
             address6 = Ipv6Address(prefix6.c_str());
 
-
-
             Ipv6InterfaceData::AdvPrefix p;
             p.prefix = address6;
             p.prefixLength = prefLength;
@@ -767,7 +844,6 @@ void Bgp::routerIntfAndRouteConfig(cXMLElement *rtrConfig)
 
     cXMLElementList routeNodes6 = rtrConfig->getElementsByTagName("Route6");
     for (auto & elem : routeNodes6) {
-        Ipv6Route *entry = new Ipv6Route;
 
         const char * addr6c = elem->getAttribute("destination");
         std::string add6 = addr6c;
@@ -1077,10 +1153,14 @@ SessionId Bgp::findIdFromPeerAddr(std::map<SessionId, BgpSession *> sessions, L3
 {
     for (auto & session : sessions)
     {
-        if ((session).second->getPeerAddr().equals(peerAddr.toIpv4())) {
-            return (session).first;
-        } else if ((session).second->getPeerAddr6() == (peerAddr.toIpv6())) {
-            return (session).first;
+        if (peerAddr.getType() == L3Address::IPv4) {
+            if ((session).second->getPeerAddr().equals(peerAddr.toIpv4())) {
+                    return (session).first;
+                }
+        } else if (peerAddr.getType() == L3Address::IPv6) {
+            if ((session).second->getPeerAddr6() == (peerAddr.toIpv6())) {
+                        return (session).first;
+            }
         }
     }
     return -1;
@@ -1143,8 +1223,8 @@ int Bgp::isInInterfaceTable(IInterfaceTable *ifTable, Ipv4Address addr)
 int Bgp::isInInterfaceTable6(IInterfaceTable *ifTable, Ipv6Address addr)
 {
     for (int i = 0; i < ifTable->getNumInterfaces(); i++) {
-        for (int j = 0; j < ifTable->getInterface(i)->ipv6Data()->getNumAdvPrefixes(); j++) {
-            if (ifTable->getInterface(i)->ipv6Data()->getAdvPrefix(j).prefix == addr) {
+        for (int j = 0; j < ifTable->getInterface(i)->ipv6Data()->getNumAddresses(); j++) {
+            if (ifTable->getInterface(i)->ipv6Data()->getAddress(j) == addr) {
                 return i;
             }
         }
@@ -1178,8 +1258,32 @@ unsigned long Bgp::isInTable(std::vector<RoutingTableEntry *> rtTable, RoutingTa
     return -1;
 }
 
+unsigned long Bgp::isInTable6(std::vector<RoutingTableEntry6 *> rtTable, RoutingTableEntry6 *entry)
+{
+    for (unsigned long i = 0; i < rtTable.size(); i++) {
+        RoutingTableEntry6 *entryCur = rtTable[i];
+        if (entry->getDestPrefix().compare(entryCur->getDestPrefix()) == 0)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
 /*return true if the AS is found, false else*/
 bool Bgp::isInASList(std::vector<AsId> ASList, RoutingTableEntry *entry)
+{
+    for (auto & elem : ASList) {
+        for (unsigned int i = 0; i < entry->getASCount(); i++) {
+            if ((elem) == entry->getAS(i)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool Bgp::isInASList6(std::vector<AsId> ASList, RoutingTableEntry6 *entry)
 {
     for (auto & elem : ASList) {
         for (unsigned int i = 0; i < entry->getASCount(); i++) {

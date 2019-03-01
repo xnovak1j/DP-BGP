@@ -437,65 +437,93 @@ void OpenConfirm::UpdateMsgEvent()
 //RFC 4271 - 8.2.2.  Finite State Machine - Established State
 void Established::entry()
 {
-    std::cout << "Established::entry - send an update message" << std::endl;
+    //if it's an EGP Session, send update messages with all routing information to BGP peer
+    //if it's an IGP Session, send update message with only the BGP routes learned by EGP
     BgpSession& session = TopState::box().getModule();
     session._info.sessionEstablished = true;
 
-    //if it's an EGP Session, send update messages with all routing information to BGP peer
-    //if it's an IGP Session, send update message with only the BGP routes learned by EGP
-    const Ipv4Route *rtEntry;
-    RoutingTableEntry *BGPEntry;
-    IIpv4RoutingTable *IPRoutingTable = session.getIPRoutingTable();
-    std::vector<Ipv4Address> networksToAdvertise = session.getNetworksToAdvertise();
+    if(session._info.multiAddress) {
+        std::cout << "Established::entry - send an Ipv6 update message" << std::endl;
+        const Ipv6Route *rtEntry6;
+        RoutingTableEntry6 *BGPEntry6;
+        Ipv6RoutingTable *IPRoutingTable6 = session.getIPRoutingTable6();
+        std::vector<Ipv6Address> networksToAdvertise6 = session.getNetworksToAdvertise6();
 
-    //std::cout << "device " << session.getDeviceName() << " number networks to advertise: " << networksToAdvertise.size() << std::endl;
+        for (auto network : networksToAdvertise6) {
+            int i = session.isInRoutingTable6(network);
+            if(i != -1) {
+                rtEntry6 = IPRoutingTable6->getRoute(i);
+                if (session.getType() == EGP) {
+                    BGPEntry6 = new RoutingTableEntry6(rtEntry6);
+                    BGPEntry6->addAS(session._info.ASValue);
 
-    //for (int i = 1; i < IPRoutingTable->getNumRoutes(); i++) {
-    for (auto network : networksToAdvertise) {
-        int i = session.isInRoutingTable(network);
-        if(i != -1) {
-            rtEntry = IPRoutingTable->getRoute(i);
-            /*if (rtEntry->getNetmask() == Ipv4Address::ALLONES_ADDRESS ||
-                rtEntry->getSourceType() == IRoute::IFACENETMASK ||
-                rtEntry->getSourceType() == IRoute::MANUAL ||
-                rtEntry->getSourceType() == IRoute::BGP)
-            {
-                std::cout<<"odseknute start :"<<rtEntry<< " "<< i << " " <<rtEntry->getSourceType()<<std::endl;
-                continue;
-            }*/
+                    session.updateSendProcess6(BGPEntry6);
 
-            /*if(!(rtEntry->getSourceType() == IRoute::MANUAL && rtEntry->getMetric() == 0)) {
-                continue;
-            }*/
+                    std::cout<<"update6 :"<<rtEntry6<< " "<< i <<std::endl;
 
-            if (session.getType() == EGP) {
+                    delete BGPEntry6;
+                }
+            }
+        }
+        std::vector<RoutingTableEntry6 *> BGPRoutingTable6 = session.getBGPRoutingTable6();
+        for (auto & elem : BGPRoutingTable6) {
+            session.updateSendProcess6((elem));
+        }
+    } else {
+        std::cout << "Established::entry - send an Ipv4 update message" << std::endl;
 
-                // actually not working with ospf
-               /* if (rtEntry->getSourceType() == IRoute::OSPF && session.checkExternalRoute(rtEntry)) {
-                    std::cout<<"odseknute :"<<rtEntry<< " "<< i <<std::endl;
+        const Ipv4Route *rtEntry;
+        RoutingTableEntry *BGPEntry;
+        IIpv4RoutingTable *IPRoutingTable = session.getIPRoutingTable();
+        std::vector<Ipv4Address> networksToAdvertise = session.getNetworksToAdvertise();
+
+        //std::cout << "device " << session.getDeviceName() << " number networks to advertise: " << networksToAdvertise.size() << std::endl;
+
+        //for (int i = 1; i < IPRoutingTable->getNumRoutes(); i++) {
+        for (auto network : networksToAdvertise) {
+            int i = session.isInRoutingTable(network);
+            if(i != -1) {
+                rtEntry = IPRoutingTable->getRoute(i);
+                /*if (rtEntry->getNetmask() == Ipv4Address::ALLONES_ADDRESS ||
+                    rtEntry->getSourceType() == IRoute::IFACENETMASK ||
+                    rtEntry->getSourceType() == IRoute::MANUAL ||
+                    rtEntry->getSourceType() == IRoute::BGP)
+                {
+                    std::cout<<"odseknute start :"<<rtEntry<< " "<< i << " " <<rtEntry->getSourceType()<<std::endl;
                     continue;
                 }*/
 
+                /*if(!(rtEntry->getSourceType() == IRoute::MANUAL && rtEntry->getMetric() == 0)) {
+                    continue;
+                }*/
 
+                if (session.getType() == EGP) {
+                    // actually not working with ospf
+                   /* if (rtEntry->getSourceType() == IRoute::OSPF && session.checkExternalRoute(rtEntry)) {
+                        std::cout<<"odseknute :"<<rtEntry<< " "<< i <<std::endl;
+                        continue;
+                    }*/
+                        BGPEntry = new RoutingTableEntry(rtEntry);
+                        //std::string entryh = rtEntry->getDestination().str();
+                        //std::string entryn = rtEntry->getNetmask().str();
+                        BGPEntry->addAS(session._info.ASValue);
+                        session.updateSendProcess(BGPEntry);
 
-                    BGPEntry = new RoutingTableEntry(rtEntry);
-                    //std::string entryh = rtEntry->getDestination().str();
-                    //std::string entryn = rtEntry->getNetmask().str();
-                    BGPEntry->addAS(session._info.ASValue);
-                    session.updateSendProcess(BGPEntry);
+                        std::cout<<"update :"<<rtEntry<< " "<< i <<std::endl;
 
-                    std::cout<<"update :"<<rtEntry<< " "<< i <<std::endl;
-
-                    delete BGPEntry;
-
+                        delete BGPEntry;
+                }
             }
+        }
+
+        std::vector<RoutingTableEntry *> BGPRoutingTable = session.getBGPRoutingTable();
+        for (auto & elem : BGPRoutingTable) {
+            session.updateSendProcess((elem));
         }
     }
 
-    std::vector<RoutingTableEntry *> BGPRoutingTable = session.getBGPRoutingTable();
-    for (auto & elem : BGPRoutingTable) {
-        session.updateSendProcess((elem));
-    }
+
+
 
     //when all EGP Session is in established state, start IGP Session(s)
     SessionId nextSession = session.findAndStartNextSession(EGP);

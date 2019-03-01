@@ -126,22 +126,31 @@ void BgpSession::restartsConnectRetryTimer(bool start)
 
 void BgpSession::sendOpenMessage()
 {
-    //xnovak1j  - capability extension
     BgpOptionalParameters content;
     content.parameterType = Capability;
     content.parameterLength = 6;
     content.parameterValue.capabilityCode = Multiprotocol_extension_capability;
     content.parameterValue.capabilityLength = 4;
-    content.parameterValue.capabilityValue.AFI = Ipv4;
+    //xnovak1j  - capability extension
+    if(_info.multiAddress) {
+        content.parameterValue.capabilityValue.AFI = Ipv6;
+    } else {
+        content.parameterValue.capabilityValue.AFI = Ipv4;
+    }
     content.parameterValue.capabilityValue.SAFI = unicast;
-
-
 
     Packet *pk = new Packet("BgpOpen");
     const auto& openMsg = makeShared<BgpOpenMessage>();
     openMsg->setMyAS(_info.ASValue);
     openMsg->setHoldTime(_holdTime);
-    openMsg->setBGPIdentifier(_info.socket->getLocalAddress().toIpv4());
+
+
+    if(_info.multiAddress) {
+        openMsg->setBGPIdentifier(_info.routerID);
+    } else {
+        openMsg->setBGPIdentifier(_info.socket->getLocalAddress().toIpv4());
+    }
+
     /*xnovak1j - capability option for multiprotocol in optional parameters*/
     openMsg->setOptionalParametersArraySize(1);
     openMsg->setOptionalParameters(0, content);
