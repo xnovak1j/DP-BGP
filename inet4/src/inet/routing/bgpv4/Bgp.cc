@@ -1171,6 +1171,21 @@ void Bgp::loadConfigFromXML(cXMLElement *bgpConfig, cXMLElement *config)
    // cXMLElementList ASConfig = ASNode->getChildren();
     //routerInSameASList = loadASConfig(ASConfig);
 
+    if (_routerInSameASList6.size()) {
+            unsigned int routerPeerPosition = 1;
+            delayTab[3] += myPos * 4;
+            for (auto it = _routerInSameASList6.begin(); it != _routerInSameASList6.end(); it++, routerPeerPosition++) {
+                SessionId newSessionID;
+                TcpSocket *socketListenIGP = new TcpSocket();
+                newSessionID = createSession6(IGP, (*it));
+                delayTab[3] += calculateStartDelay(_routerInSameASList6.size(), routerPosition, routerPeerPosition);
+                std::cout<<delayTab[3]<<" router IPV6 inter *************** " << getParentModule()->getName() << std::endl;
+                _BGPSessions[newSessionID]->setTimers(delayTab);
+                _BGPSessions[newSessionID]->setSocketListen(socketListenIGP);
+            }
+        }
+
+
     //create IGP Session(s)
     if (_routerInSameASList.size()) {
         unsigned int routerPeerPosition = 1;
@@ -1193,19 +1208,7 @@ void Bgp::loadConfigFromXML(cXMLElement *bgpConfig, cXMLElement *config)
         }
     }
     //create IGP sessions ipv6
-    if (_routerInSameASList6.size()) {
-            unsigned int routerPeerPosition = 1;
-            delayTab[3] += myPos * 4;
-            for (auto it = _routerInSameASList6.begin(); it != _routerInSameASList6.end(); it++, routerPeerPosition++) {
-                SessionId newSessionID;
-                TcpSocket *socketListenIGP = new TcpSocket();
-                newSessionID = createSession6(IGP, (*it));
-                delayTab[3] += calculateStartDelay(_routerInSameASList6.size(), routerPosition, routerPeerPosition);
-                std::cout<<delayTab[3]<<" router IPV6 inter *************** " << getParentModule()->getName() << std::endl;
-                _BGPSessions[newSessionID]->setTimers(delayTab);
-                _BGPSessions[newSessionID]->setSocketListen(socketListenIGP);
-            }
-        }
+
 
 }
 
