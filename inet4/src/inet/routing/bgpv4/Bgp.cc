@@ -408,7 +408,7 @@ unsigned char Bgp::decisionProcess(const BgpUpdateMessage& msg, RoutingTableEntr
 
     if (_BGPSessions[sessionIndex]->getType() == IGP) {
         _rt->addRoute(entry);
-        std::cout<<entry->getSourceType()<<std::endl;
+        //std::cout<<entry->getSourceType()<<std::endl;
     }
 
     if (_BGPSessions[sessionIndex]->getType() == EGP) {
@@ -489,7 +489,7 @@ unsigned char Bgp::decisionProcess6(const BgpUpdateMessage6& msg, RoutingTableEn
 
     if (_BGPSessions[sessionIndex]->getType() == IGP) {
         _rt6->addRoutingProtocolRoute(entry);
-        std::cout<<entry->getSourceType()<<std::endl;
+        //std::cout<<entry->getSourceType()<<std::endl;
     }
 
     if (_BGPSessions[sessionIndex]->getType() == EGP) {
@@ -1029,8 +1029,8 @@ void Bgp::loadConfigFromXML(cXMLElement *config)
         }
         positionRouterInConfig++;
     }
-    std::cout << "device " << getParentModule()->getName() << " number networks to advertise: " << _networksToAdvertise.size() <<" router position in AS "<< routerPosition << " router pos in config " << myPos << " router in same as list "<< _routerInSameASList.size() <<std::endl;
-    std::cout << "device " << getParentModule()->getName() << " number networks to advertise: " << _networksToAdvertise6.size() <<" router position in AS "<< routerPosition << " router pos in config " << myPos << " router in same as list6 "<< _routerInSameASList6.size() <<std::endl;
+//    std::cout << "device " << getParentModule()->getName() << " number networks to advertise: " << _networksToAdvertise.size() <<" router position in AS "<< routerPosition << " router pos in config " << myPos << " router in same as list "<< _routerInSameASList.size() <<std::endl;
+//    std::cout << "device " << getParentModule()->getName() << " number networks to advertise: " << _networksToAdvertise6.size() <<" router position in AS "<< routerPosition << " router pos in config " << myPos << " router in same as list6 "<< _routerInSameASList6.size() <<std::endl;
 
     if (_myAS == 0)
         throw cRuntimeError("BGP Error:  No AS configuration for Router ID: %s", _rt->getRouterId().str().c_str());
@@ -1050,7 +1050,7 @@ void Bgp::loadConfigFromXML(cXMLElement *config)
             }
             delayTab[3] += calculateStartDelay(_routerInSameASList.size(), routerPosition, routerPeerPosition);
 
-           // std::cout<<delayTab[3]<<" router -------------------------------------++++++ " << getParentModule()->getName() << std::endl;
+            std::cout<<delayTab[3]<<" router -------------------------------------++++++ " << getParentModule()->getName() << std::endl;
 
             _BGPSessions[newSessionID]->setTimers(delayTab);
             _BGPSessions[newSessionID]->setSocketListen(socketListenIGP);
@@ -1066,7 +1066,7 @@ void Bgp::loadConfigFromXML(cXMLElement *config)
             TcpSocket *socketListenIGP = new TcpSocket();
             newSessionID = createSession6(IGP, (*it));
             delayTab[3] += calculateStartDelay(_routerInSameASList6.size(), routerPosition, routerPeerPosition);
-           // std::cout<<delayTab[3]<<" router IPV6 inter *************** " << getParentModule()->getName() << std::endl;
+            std::cout<<delayTab[3]<<" router IPV6 inter *************** " << getParentModule()->getName() << std::endl;
             _BGPSessions[newSessionID]->setTimers(delayTab);
             _BGPSessions[newSessionID]->setSocketListen(socketListenIGP);
         }

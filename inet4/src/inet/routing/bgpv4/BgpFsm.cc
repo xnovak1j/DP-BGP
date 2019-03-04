@@ -33,22 +33,18 @@ void TopState::init()
 //RFC 4271 - 8.2.2.  Finite State Machine - IdleState
 void Idle::ManualStart()
 {
-
-
     EV_INFO << "Processing Idle::event1" << std::endl;
     BgpSession& session = TopState::box().getModule();
 
-    if(session._info.multiAddress) {
-        std::cout << "--------------------Router session info Rid Ipv6 "<< session._info.routerID << std::endl;
-        std::cout << "--------------------Local address Ipv6 "<< session._info.localAddr6 << std::endl;
-        std::cout << "--------------------Peer address Ipv6 "<< session._info.peerAddr6 << std::endl;
-    } else {
-        std::cout << "++++++++++++++++++++Router session info Rid "<< session._info.routerID << std::endl;
-        std::cout << "++++++++++++++++++++Local address "<< session._info.localAddr << std::endl;
-        std::cout << "++++++++++++++++++++Peer address"<< session._info.peerAddr << std::endl;
-    }
-
-
+//    if(session._info.multiAddress) {
+//        std::cout << "--------------------Router session info Rid Ipv6 "<< session._info.routerID << std::endl;
+//        std::cout << "--------------------Local address Ipv6 "<< session._info.localAddr6 << std::endl;
+//        std::cout << "--------------------Peer address Ipv6 "<< session._info.peerAddr6 << std::endl;
+//    } else {
+//        std::cout << "++++++++++++++++++++Router session info Rid "<< session._info.routerID << std::endl;
+//        std::cout << "++++++++++++++++++++Local address "<< session._info.localAddr << std::endl;
+//        std::cout << "++++++++++++++++++++Peer address"<< session._info.peerAddr << std::endl;
+//    }
 
     //In this state, BGP FSM refuses all incoming BGP connections for this peer.
     //No resources are allocated to the peer.  In response to a ManualStart event
@@ -216,7 +212,6 @@ void Active::TcpConnectionFails()
      *  increments the ConnectRetryCounter by 1
      *  changes its state to Idle
      * */
-
     setState<Idle>();
 }
 
@@ -460,9 +455,7 @@ void Established::entry()
                     BGPEntry6->addAS(session._info.ASValue);
 
                     session.updateSendProcess6(BGPEntry6);
-
-                    std::cout<<"update6 :"<<rtEntry6<< " "<< i <<std::endl;
-
+                    //std::cout<<"update6 :"<<rtEntry6<< " "<< i <<std::endl;
                     delete BGPEntry6;
                 }
             }
@@ -506,13 +499,9 @@ void Established::entry()
                         continue;
                     }*/
                         BGPEntry = new RoutingTableEntry(rtEntry);
-                        //std::string entryh = rtEntry->getDestination().str();
-                        //std::string entryn = rtEntry->getNetmask().str();
                         BGPEntry->addAS(session._info.ASValue);
                         session.updateSendProcess(BGPEntry);
-
-                        std::cout<<"update :"<<rtEntry<< " "<< i <<std::endl;
-
+                        //std::cout<<"update :"<<rtEntry<< " "<< i <<std::endl;
                         delete BGPEntry;
                 }
             }
@@ -523,10 +512,6 @@ void Established::entry()
             session.updateSendProcess((elem));
         }
     }
-
-
-
-
     //when all EGP Session is in established state, start IGP Session(s)
     SessionId nextSession = session.findAndStartNextSession(EGP);
     if (nextSession == static_cast<SessionId>(-1)) {
