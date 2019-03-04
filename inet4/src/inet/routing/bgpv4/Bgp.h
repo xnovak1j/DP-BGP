@@ -139,9 +139,7 @@ class INET_API Bgp : public cSimpleModule, public ILifecycle, public TcpSocket::
     unsigned long isInTable6(std::vector<RoutingTableEntry6 *> rtTable, RoutingTableEntry6 *entry);
 
     std::vector<const char *> loadASConfig(cXMLElementList& ASConfig);
-    void loadSessionConfig(cXMLElementList& sessionList, simtime_t *delayTab);
-    void loadSessionConfig6(cXMLElementList& sessionList, simtime_t *delayTab);
-    void loadConfigFromXML(cXMLElement *bgpConfig, cXMLElement *config);
+    void loadConfigFromXML(cXMLElement *config);
     AsId findMyAS(cXMLElementList& ASList, int& outRouterPosition);
     bool ospfExist(IIpv4RoutingTable *rtTable);
     void loadTimerConfig(cXMLElementList& timerConfig, simtime_t *delayTab);
