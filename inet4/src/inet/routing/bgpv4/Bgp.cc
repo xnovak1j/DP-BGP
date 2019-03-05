@@ -929,6 +929,18 @@ void Bgp::loadBgpNodeConfig(cXMLElement *bgpNode, simtime_t *delayTab, int pos)
             cXMLElementList neighborNodes = elem->getElementsByTagName("Neighbor");
             for (auto & network : networkNodes) {
                 _networksToAdvertise.push_back(Ipv4Address((network)->getAttribute("Addr")));
+
+                int i = isInRoutingTable(_rt, Ipv4Address((network)->getAttribute("Addr")));
+                if (i != -1) {
+                    const Ipv4Route *rtEntry = _rt->getRoute(i);
+                    //std::cout<<rtEntry->getGateway()<<std::endl;
+                    RoutingTableEntry *BGPEntry = new RoutingTableEntry(rtEntry);
+//                    Ipv4Address nextHop;
+//                    BGPEntry->setNextHop(nextHop);
+                    BGPEntry->addAS(_myAS);
+                    BGPEntry->setPathType(IGP);
+                    _BGPRoutingTable.push_back(BGPEntry);
+                }
             }
 
             for (auto & neighbor : neighborNodes) {
@@ -956,6 +968,17 @@ void Bgp::loadBgpNodeConfig(cXMLElement *bgpNode, simtime_t *delayTab, int pos)
             cXMLElementList neighborNodes = elem->getElementsByTagName("Neighbor");
             for (auto & network : networkNodes) {
                 _networksToAdvertise6.push_back(Ipv6Address((network)->getAttribute("Addr")));
+
+                int i = isInRoutingTable6(_rt6, Ipv6Address((network)->getAttribute("Addr")));
+               if (i != -1) {
+                   const Ipv6Route *rtEntry = _rt6->getRoute(i);
+                   RoutingTableEntry6 *BGPEntry = new RoutingTableEntry6(rtEntry);
+//                   Ipv6Address nextHop;
+//                   BGPEntry->setNextHop(nextHop);
+                   BGPEntry->addAS(_myAS);
+                   BGPEntry->setPathType(IGP);
+                   _BGPRoutingTable6.push_back(BGPEntry);
+               }
             }
 
             for (auto & neighbor : neighborNodes) {

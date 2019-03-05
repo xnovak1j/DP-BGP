@@ -462,7 +462,9 @@ void Established::entry()
         }
         std::vector<RoutingTableEntry6 *> BGPRoutingTable6 = session.getBGPRoutingTable6();
         for (auto & elem : BGPRoutingTable6) {
-            session.updateSendProcess6((elem));
+            Ipv6Address tmp;
+            if (elem->getNextHop() != tmp)
+                session.updateSendProcess6((elem));
         }
     } else {
         std::cout << "Established::entry - send an Ipv4 update message" << std::endl;
@@ -509,7 +511,8 @@ void Established::entry()
 
         std::vector<RoutingTableEntry *> BGPRoutingTable = session.getBGPRoutingTable();
         for (auto & elem : BGPRoutingTable) {
-            session.updateSendProcess((elem));
+            if(elem->getGateway() != Ipv4Address::UNSPECIFIED_ADDRESS)
+                session.updateSendProcess((elem));
         }
     }
     //when all EGP Session is in established state, start IGP Session(s)
