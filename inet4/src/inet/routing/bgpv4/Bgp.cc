@@ -918,7 +918,7 @@ void Bgp::routerIntfAndRouteConfig(cXMLElement *rtrConfig)
 
 void Bgp::loadBgpNodeConfig(cXMLElement *bgpNode, simtime_t *delayTab, int pos)
 {
-    //simtime_t saveStartDelay = delayTab[3];
+    simtime_t saveStartDelay = delayTab[3];
     _myAS = atoi((bgpNode)->getAttribute("as"));
 
     cXMLElementList afNodes = bgpNode->getElementsByTagName("Address-family");
@@ -937,7 +937,7 @@ void Bgp::loadBgpNodeConfig(cXMLElement *bgpNode, simtime_t *delayTab, int pos)
                     RoutingTableEntry *BGPEntry = new RoutingTableEntry(rtEntry);
 //                    Ipv4Address nextHop;
 //                    BGPEntry->setNextHop(nextHop);
-                    BGPEntry->addAS(_myAS);
+                    //BGPEntry->addAS(_myAS);
                     BGPEntry->setPathType(IGP);
                     _BGPRoutingTable.push_back(BGPEntry);
                 }
@@ -954,13 +954,15 @@ void Bgp::loadBgpNodeConfig(cXMLElement *bgpNode, simtime_t *delayTab, int pos)
                     if((_rt->getInterfaceForDestAddr(peerAddr)->getIpv4Address()).getInt() < peerAddr.getInt()){
                         delayTab[3] += pos;
                     } else {
-                        delayTab[3] += pos + 0.5;
+                        delayTab[3] += pos;
                     }
                     std::cout<<delayTab[3]<<" router IPV4 extern *************** " << getParentModule()->getName() << std::endl;
                     SessionId newSessionID = createSession(EGP, peerAddr.str().c_str());
                     _BGPSessions[newSessionID]->setTimers(delayTab);
                     TcpSocket *socketListenEGP = new TcpSocket();
                     _BGPSessions[newSessionID]->setSocketListen(socketListenEGP);
+
+                    delayTab[3] = saveStartDelay;
                 }
             }
         } else if(strcmp((elem)->getAttribute("id"), "Ipv6") == 0) { //Ipv6 address family
@@ -975,7 +977,7 @@ void Bgp::loadBgpNodeConfig(cXMLElement *bgpNode, simtime_t *delayTab, int pos)
                    RoutingTableEntry6 *BGPEntry = new RoutingTableEntry6(rtEntry);
 //                   Ipv6Address nextHop;
 //                   BGPEntry->setNextHop(nextHop);
-                   BGPEntry->addAS(_myAS);
+                   //BGPEntry->addAS(_myAS);
                    BGPEntry->setPathType(IGP);
                    _BGPRoutingTable6.push_back(BGPEntry);
                }
@@ -990,9 +992,9 @@ void Bgp::loadBgpNodeConfig(cXMLElement *bgpNode, simtime_t *delayTab, int pos)
                     Ipv6Address peerAddr = Ipv6Address((neighbor)->getAttribute("Addr"));
 
                    if(_rt6->getOutputInterfaceForDestination(peerAddr)->ipv6Data()->getGlblAddress().compare(peerAddr) < 0){
-                       delayTab[3] += pos + 1;
+                       delayTab[3] += pos + 0.5;
                    } else {
-                       delayTab[3] += pos + 1.5;
+                       delayTab[3] += pos + 0.5;
                    }
 
                    //std::cout<<"delay " << delayTab[3] <<std::endl;
@@ -1001,6 +1003,8 @@ void Bgp::loadBgpNodeConfig(cXMLElement *bgpNode, simtime_t *delayTab, int pos)
                    _BGPSessions[newSessionID]->setTimers(delayTab);
                    TcpSocket *socketListenEGP = new TcpSocket();
                    _BGPSessions[newSessionID]->setSocketListen(socketListenEGP);
+
+                   delayTab[3] = saveStartDelay;
                 }
             }
         }
@@ -1061,7 +1065,7 @@ void Bgp::loadConfigFromXML(cXMLElement *config)
     //create IGP Session(s)
     if (_routerInSameASList.size()) {
         unsigned int routerPeerPosition = 1;
-        delayTab[3] += myPos * 2;
+        delayTab[3] += myPos;
         for (auto it = _routerInSameASList.begin(); it != _routerInSameASList.end(); it++, routerPeerPosition++) {
             SessionId newSessionID;
             TcpSocket *socketListenIGP = new TcpSocket();
@@ -1083,7 +1087,7 @@ void Bgp::loadConfigFromXML(cXMLElement *config)
     //create IGP sessions ipv6
     if (_routerInSameASList6.size()) {
         unsigned int routerPeerPosition = 1;
-        delayTab[3] += myPos * 4;
+        delayTab[3] += myPos;
         for (auto it = _routerInSameASList6.begin(); it != _routerInSameASList6.end(); it++, routerPeerPosition++) {
             SessionId newSessionID;
             TcpSocket *socketListenIGP = new TcpSocket();

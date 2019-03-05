@@ -463,7 +463,7 @@ void Established::entry()
         std::vector<RoutingTableEntry6 *> BGPRoutingTable6 = session.getBGPRoutingTable6();
         for (auto & elem : BGPRoutingTable6) {
             Ipv6Address tmp;
-            if (elem->getNextHop() != tmp)
+            if (elem->getNextHop() != tmp && elem->getASCount() != 0)
                 session.updateSendProcess6((elem));
         }
     } else {
@@ -511,7 +511,7 @@ void Established::entry()
 
         std::vector<RoutingTableEntry *> BGPRoutingTable = session.getBGPRoutingTable();
         for (auto & elem : BGPRoutingTable) {
-            if(elem->getGateway() != Ipv4Address::UNSPECIFIED_ADDRESS)
+            if(elem->getGateway() != Ipv4Address::UNSPECIFIED_ADDRESS && elem->getASCount() != 0)
                 session.updateSendProcess((elem));
         }
     }
