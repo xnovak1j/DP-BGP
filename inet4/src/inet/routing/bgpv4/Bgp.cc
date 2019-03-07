@@ -655,7 +655,7 @@ void Bgp::updateSendProcess6(const unsigned char type, SessionId sessionIndex, R
 
                 //RFC 4271 : set My AS in first position if it is not already
                 if (entry->getAS(0) != _myAS) {
-                    content.getAsPathForUpdate(0).setLength(2+(16*(nbAS + 1)));
+                    content.getAsPathForUpdate(0).setLength(2+(4*(nbAS + 1)));
                     content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValueArraySize(nbAS + 1);
                     content.getAsPathForUpdate(0).getValueForUpdate(0).setLength(nbAS + 1);
                     content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(0, _myAS);
@@ -664,7 +664,7 @@ void Bgp::updateSendProcess6(const unsigned char type, SessionId sessionIndex, R
                     }
                 }
                 else {
-                    content.getAsPathForUpdate(0).setLength(2+(16*nbAS));
+                    content.getAsPathForUpdate(0).setLength(2+(4*nbAS));
                     content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValueArraySize(nbAS);
                     content.getAsPathForUpdate(0).getValueForUpdate(0).setLength(nbAS);
                     for (unsigned int j = 0; j < nbAS; j++) {
