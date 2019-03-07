@@ -176,7 +176,7 @@ struct BgpUpdateAttributeFlags
     bool optionalBit;
     bool transitiveBit;
     bool partialBit;
-    bool estendedLengthBit;
+    bool extendedLengthBit;
 }
 
 //struct BgpUpdateAttributeType
@@ -342,7 +342,7 @@ class BgpUpdateMessage6 extends BgpHeader
 	
 	unsigned short withdrawnRoutesLength = 0; // 2 octets
     BgpUpdateWithdrawnRoutes6 withdrawnRoutes[];
-    unsigned short pathAttributeLength = 0; // 2 octets
+    unsigned short pathAttributeLength = 1; // 2 octets
     BgpUpdatePathAttributeList6 pathAttributeList[]; // optional field (size is either 0 or 1)
 }
 
@@ -354,7 +354,7 @@ class BgpUpdateMessage extends BgpHeader
 
 	unsigned short withdrawnRoutesLength = 0; // 2 octets
     BgpUpdateWithdrawnRoutes withdrawnRoutes[];
-    unsigned short pathAttributeLength = 0; // 2 octets
+    unsigned short pathAttributeLength = 1; // 2 octets
     BgpUpdatePathAttributeList pathAttributeList[]; // optional field (size is either 0 or 1)
     BgpUpdateNlri NLRI;
 }

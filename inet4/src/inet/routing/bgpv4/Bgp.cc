@@ -575,27 +575,33 @@ void Bgp::updateSendProcess(const unsigned char type, SessionId sessionIndex, Ro
 
                 unsigned int nbAS = entry->getASCount();
                 content.setAsPathArraySize(1);
+
                 content.getAsPathForUpdate(0).setValueArraySize(1);
+                content.getAsPathForUpdate(0).getFlagsForUpdate().transitiveBit = true;
                 content.getAsPathForUpdate(0).getValueForUpdate(0).setType(AS_SEQUENCE);
                 //RFC 4271 : set My AS in first position if it is not already
                 if (entry->getAS(0) != _myAS) {
+                    content.getAsPathForUpdate(0).setLength(2+(4*(nbAS + 1)));
                     content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValueArraySize(nbAS + 1);
-                    content.getAsPathForUpdate(0).getValueForUpdate(0).setLength(1);
+                    content.getAsPathForUpdate(0).getValueForUpdate(0).setLength(nbAS + 1);
                     content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(0, _myAS);
                     for (unsigned int j = 1; j < nbAS + 1; j++) {
                         content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(j, entry->getAS(j - 1));
                     }
                 }
                 else {
+                    content.getAsPathForUpdate(0).setLength(2+(4*nbAS));
                     content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValueArraySize(nbAS);
-                    content.getAsPathForUpdate(0).getValueForUpdate(0).setLength(1);
+                    content.getAsPathForUpdate(0).getValueForUpdate(0).setLength(nbAS);
                     for (unsigned int j = 0; j < nbAS; j++) {
                         content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(j, entry->getAS(j));
                     }
                 }
 
                 InterfaceEntry *iftEntry = (elem).second->getLinkIntf();
+                content.getOriginForUpdate().getFlagsForUpdate().transitiveBit = true;
                 content.getOriginForUpdate().setValue((elem).second->getType());
+                content.getNextHopForUpdate().getFlagsForUpdate().transitiveBit = true;
                 content.getNextHopForUpdate().setValue(iftEntry->ipv4Data()->getIPAddress());
                 Ipv4Address netMask = entry->getNetmask();
                 NLRI.prefix = entry->getDestination().doAnd(netMask);
@@ -644,20 +650,23 @@ void Bgp::updateSendProcess6(const unsigned char type, SessionId sessionIndex, R
                 //AS PATH
                 content.setAsPathArraySize(1);
                 content.getAsPathForUpdate(0).setValueArraySize(1);
+                content.getAsPathForUpdate(0).getFlagsForUpdate().transitiveBit = true;
                 content.getAsPathForUpdate(0).getValueForUpdate(0).setType(AS_SEQUENCE);
 
                 //RFC 4271 : set My AS in first position if it is not already
                 if (entry->getAS(0) != _myAS) {
+                    content.getAsPathForUpdate(0).setLength(2+(16*(nbAS + 1)));
                     content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValueArraySize(nbAS + 1);
-                    content.getAsPathForUpdate(0).getValueForUpdate(0).setLength(1);
+                    content.getAsPathForUpdate(0).getValueForUpdate(0).setLength(nbAS + 1);
                     content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(0, _myAS);
                     for (unsigned int j = 1; j < nbAS + 1; j++) {
                         content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(j, entry->getAS(j - 1));
                     }
                 }
                 else {
+                    content.getAsPathForUpdate(0).setLength(2+(16*nbAS));
                     content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValueArraySize(nbAS);
-                    content.getAsPathForUpdate(0).getValueForUpdate(0).setLength(1);
+                    content.getAsPathForUpdate(0).getValueForUpdate(0).setLength(nbAS);
                     for (unsigned int j = 0; j < nbAS; j++) {
                         content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(j, entry->getAS(j));
                     }
@@ -668,10 +677,13 @@ void Bgp::updateSendProcess6(const unsigned char type, SessionId sessionIndex, R
 
                 //origin
                 InterfaceEntry *iftEntry = (elem).second->getLinkIntf();
+                content.getOriginForUpdate().getFlagsForUpdate().transitiveBit = true;
                 content.getOriginForUpdate().setValue((elem).second->getType());
                 //MP reach NLRI
+                content.getMpReachNlriForUpdate().getFlagsForUpdate().optionalBit = true;
                 content.getMpReachNlriForUpdate().setLength(39);
                 //next hop
+                content.getMpReachNlriForUpdate().getMpReachNlriValueForUpdate().getNextHopForUpdate().getFlagsForUpdate().transitiveBit = true;
                 content.getMpReachNlriForUpdate().getMpReachNlriValueForUpdate().getNextHopForUpdate().setValue(iftEntry->ipv6Data()->getGlblAddress());
                 //nlri
                 content.getMpReachNlriForUpdate().getMpReachNlriValueForUpdate().setNLRI(NLRI);
@@ -879,9 +891,13 @@ void Bgp::routerIntfAndRouteConfig(cXMLElement *rtrConfig)
             intfData6->assignAddress(address6, false, SIMTIME_ZERO, SIMTIME_ZERO);
 
             // add this routes to routing table
-            _rt6->addOrUpdateOwnAdvPrefix(p.prefix.getPrefix(prefLength),
-                    p.prefixLength,
-                    myInterface->getInterfaceId(), SIMTIME_ZERO);
+            Ipv6Route *route = new Ipv6Route(p.prefix.getPrefix(prefLength), p.prefixLength, IRoute::IFACENETMASK);
+            route->setInterface(myInterface);
+            route->setExpiryTime(SIMTIME_ZERO);
+            route->setMetric(0);
+            route->setAdminDist(Ipv6Route::dDirectlyConnected);
+
+            _rt6->addRoutingProtocolRoute(route);
         }
     }
     //add static routes to ipv4 routing table
