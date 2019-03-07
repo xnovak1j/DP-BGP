@@ -1,3 +1,4 @@
+//    2019 Adrian Novak - multi address-family support
 
 #ifndef __INET_BGPROUTINGTABLEENTRY6_H
 #define __INET_BGPROUTINGTABLEENTRY6_H
