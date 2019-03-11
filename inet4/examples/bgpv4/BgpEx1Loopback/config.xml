@@ -22,12 +22,23 @@
     		</Interfaces>
     		<Bgp as="100">
     			<Address-family id="Ipv4">
-    				<Neighbor Addr="10.0.12.2" remote-as="200" />
-    				<Network Addr="100.0.1.0" />
+    				<!--DenyRouteIN address="200.0.2.0" netmask="255.255.255.0"/>	
+    				<DenyRouteOUT address="172.10.8.0" netmask="255.255.255.0"/>
+    				<DenyRoute address="172.10.8.0" netmask="255.255.255.0"/>
+    				<DenyASIN as="200" />
+    				<DenyASOUT as="100" / -->
+    				
+    				<Neighbor address="10.0.12.2" remote-as="200" />
+    				<Network address="100.0.1.0" />
     			</Address-family>
     			<Address-family id="Ipv6">
-    				<Neighbor Addr="fd00:12:12::1" remote-as="200" />
-    				<Network Addr="fd00:100:0:100::" />
+    				<!-- DenyRouteIN address="fd00:12:12::0/127" />
+    				<DenyRouteOUT address="fd00:12:12::0/127" />
+    				<DenyRoute address="fd00:12:12::0/127" / >
+    				<DenyAS as="300" / -->
+    			
+    				<Neighbor address="fd00:12:12::1" remote-as="200" />
+    				<Network address="fd00:100:0:100::" />
     			</Address-family>
     		</Bgp>
     	</Router>
@@ -49,16 +60,16 @@
     		</Interfaces>   
     		<Bgp as="200">
     			<Address-family id="Ipv4">
-    				<Neighbor Addr="10.0.12.1" remote-as="100" />
-    				<Neighbor Addr="10.0.20.2" remote-as="200" />
-    				<Network Addr="200.0.2.0" />
-    				<Network Addr="200.0.3.0" />
+    				<Neighbor address="10.0.12.1" remote-as="100" />
+    				<Neighbor address="10.0.20.2" remote-as="200" />
+    				<Network address="200.0.2.0" />
+    				<Network address="200.0.3.0" />
     			</Address-family>
     			<Address-family id="Ipv6">
-    				<Neighbor Addr="fd00:12:12::0" remote-as="100" />
-    				<Neighbor Addr="fd00:20:20::1" remote-as="200" />
-    				<Network Addr="fd00:200:0:200::" />
-    				<Network Addr="fd00:200:0:300::" />
+    				<Neighbor address="fd00:12:12::0" remote-as="100" />
+    				<Neighbor address="fd00:20:20::1" remote-as="200" />
+    				<Network address="fd00:200:0:200::" />
+    				<Network address="fd00:200:0:300::" />
     			</Address-family>	
     		</Bgp>	
 			<Route destination='200.0.3.0' netmask='255.255.255.252' interface='eth1'/>
@@ -82,16 +93,18 @@
     		</Interfaces>
     		<Bgp as="200">
     			<Address-family id="Ipv4">
-    				<Neighbor Addr="10.0.23.2" remote-as="300" />
-    				<Neighbor Addr="10.0.20.1" remote-as="200" />
-    				<Network Addr="200.0.2.0" />
-    				<Network Addr="200.0.3.0" />
+    				<Neighbor address="10.0.23.2" remote-as="300" />
+    				<Neighbor address="10.0.20.1" remote-as="200" />
+    				<Network address="200.0.2.0" />
+    				<Network address="200.0.3.0" />
+    				
+    				<!-- DenyASIN as="100" / -->
     			</Address-family>
     			<Address-family id="Ipv6">
-    				<Neighbor Addr="fd00:23:23::1" remote-as="300" />
-    				<Neighbor Addr="fd00:20:20::0" remote-as="200" />
-    				<Network Addr="fd00:200:0:200::" />
-    				<Network Addr="fd00:200:0:300::" />
+    				<Neighbor address="fd00:23:23::1" remote-as="300" />
+    				<Neighbor address="fd00:20:20::0" remote-as="200" />
+    				<Network address="fd00:200:0:200::" />
+    				<Network address="fd00:200:0:300::" />
     			</Address-family>	
     		</Bgp>
     		<Route destination='200.0.2.0' netmask='255.255.255.252' interface='eth1'/>
@@ -111,12 +124,14 @@
     		</Interfaces>
     		<Bgp as="300">
     			<Address-family id="Ipv4">
-    				<Neighbor Addr="10.0.23.1" remote-as="200" />
-    				<Network Addr="100.0.4.0" />
+    				<Neighbor address="10.0.23.1" remote-as="200" />
+    				<Network address="100.0.4.0" />
     			</Address-family>
     			<Address-family id="Ipv6">
-    				<Neighbor Addr="fd00:23:23::0" remote-as="200" />
-    				<Network Addr="fd00:300:0:400::" />
+    				<Neighbor address="fd00:23:23::0" remote-as="200" />
+    				<Network address="fd00:300:0:400::" />
+    				
+    				<!-- DenyRoute address="fd00:200:0:300::/64" /-->
     			</Address-family>	
     		</Bgp>
     	</Router>

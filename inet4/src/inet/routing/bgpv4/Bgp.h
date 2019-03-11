@@ -158,6 +158,8 @@ class INET_API Bgp : public cSimpleModule, public ILifecycle, public TcpSocket::
     void routerIntfAndRouteConfig(cXMLElement *rtrConfig);
     void loadBgpNodeConfig(cXMLElement *bgpNode, simtime_t *delayTab, int pos);
 
+    void addToDenyList(const char * addr6c, int flag);
+
     SocketMap _socketMap;
     AsId _myAS = 0;
     SessionId _currSessionId = 0;
@@ -168,7 +170,7 @@ class INET_API Bgp : public cSimpleModule, public ILifecycle, public TcpSocket::
     RoutingTableEntryVector _BGPRoutingTable;    // The BGP routing table
     RoutingTableEntryVector _prefixListIN;
     RoutingTableEntryVector _prefixListOUT;
-    RoutingTableEntryVector _prefixListINOUT;      // store union of pointers in _prefixListIN and _prefixListOUT
+    RoutingTableEntryVector _prefixList;
     std::vector<AsId> _ASListIN;
     std::vector<AsId> _ASListOUT;
     std::map<SessionId, BgpSession *> _BGPSessions;
@@ -178,7 +180,7 @@ class INET_API Bgp : public cSimpleModule, public ILifecycle, public TcpSocket::
     RoutingTableEntryVector6 _BGPRoutingTable6;    // The BGP routing table for ipv6
     RoutingTableEntryVector6 _prefixListIN6;
     RoutingTableEntryVector6 _prefixListOUT6;
-    RoutingTableEntryVector6 _prefixListINOUT6;
+    RoutingTableEntryVector6 _prefixList6;
     std::vector<AsId> _ASListIN6;
     std::vector<AsId> _ASListOUT6;
 

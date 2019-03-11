@@ -35,9 +35,30 @@ Bgp::~Bgp(void)
         delete (elem).second;
     }
 
-    for (auto & elem : _prefixListINOUT) {
+    for (auto & elem : _prefixListIN) {
         delete (elem);
     }
+
+    for (auto & elem : _prefixListOUT) {
+        delete (elem);
+    }
+
+    for (auto & elem : _prefixList) {
+        delete (elem);
+    }
+
+    for (auto & elem : _prefixListIN6) {
+        delete (elem);
+    }
+
+    for (auto & elem : _prefixListOUT6) {
+        delete (elem);
+    }
+
+    for (auto & elem : _prefixList6) {
+        delete (elem);
+    }
+
 }
 
 void Bgp::initialize(int stage)
@@ -355,7 +376,7 @@ unsigned char Bgp::decisionProcess(const BgpUpdateMessage& msg, RoutingTableEntr
 {
     //std::cout<< "----------------------"  <<std::endl;
     //Don't add the route if it exists in PrefixListINTable or in ASListINTable
-    if (isInTable(_prefixListIN, entry) != (unsigned long)-1 || isInASList(_ASListIN, entry)) {
+    if (isInTable(_prefixListIN, entry) != (unsigned long)-1  || isInTable(_prefixList, entry) != (unsigned long)-1 || isInASList(_ASListIN, entry)) {
         delete entry;
         return 0;
     }
@@ -435,7 +456,7 @@ unsigned char Bgp::decisionProcess6(const BgpUpdateMessage6& msg, RoutingTableEn
 {
  //   std::cout<< "----------------------"  <<std::endl;
     //Don't add the route if it exists in PrefixListINTable or in ASListINTable
-    if (isInTable6(_prefixListIN6, entry) != (unsigned long)-1 || isInASList6(_ASListIN6, entry)) {
+    if (isInTable6(_prefixListIN6, entry) != (unsigned long)-1 || isInTable6(_prefixList6, entry) != (unsigned long)-1 || isInASList6(_ASListIN6, entry)) {
         delete entry;
         return 0;
     }
@@ -558,11 +579,12 @@ void Bgp::updateSendProcess(const unsigned char type, SessionId sessionIndex, Ro
     for (auto & elem : _BGPSessions)
     {
         if((elem).second->isMultiAddress() == false) {
-            if (isInTable(_prefixListOUT, entry) != (unsigned long)-1 || isInASList(_ASListOUT, entry) ||
+            if (isInTable(_prefixListOUT, entry) != (unsigned long)-1 || isInTable(_prefixList, entry) != (unsigned long)-1 || isInASList(_ASListOUT, entry) ||
                 ((elem).first == sessionIndex && type != NEW_SESSION_ESTABLISHED) ||
                 (type == NEW_SESSION_ESTABLISHED && (elem).first != sessionIndex) ||
                 !(elem).second->isEstablished())
             {
+                //std::cout<< getParentModule()->getName()<<" is in as list " << _ASListOUT.size() << std::endl;
                 continue;
             }
             if ((_BGPSessions[sessionIndex]->getType() == IGP && (elem).second->getType() == EGP) ||
@@ -631,11 +653,12 @@ void Bgp::updateSendProcess6(const unsigned char type, SessionId sessionIndex, R
     for (auto & elem : _BGPSessions)
     {
         if((elem).second->isMultiAddress()) {
-            if (isInTable6(_prefixListOUT6, entry) != (unsigned long)-1 || isInASList6(_ASListOUT6, entry) ||
+            if (isInTable6(_prefixListOUT6, entry) != (unsigned long)-1 || isInTable6(_prefixList6, entry) != (unsigned long)-1 || isInASList6(_ASListOUT6, entry) ||
                 ((elem).first == sessionIndex && type != NEW_SESSION_ESTABLISHED) ||
                 (type == NEW_SESSION_ESTABLISHED && (elem).first != sessionIndex) ||
                 !(elem).second->isEstablished())
             {
+                //std::cout<< getParentModule()->getName()<<" is in as list6 " << _ASListOUT6.size() << std::endl;
                 continue;
             }
             if ((_BGPSessions[sessionIndex]->getType() == IGP && (elem).second->getType() == EGP) ||
@@ -711,6 +734,30 @@ bool Bgp::checkExternalRoute(const Ipv4Route *route)
     bool returnValue = ospf->checkExternalRoute(OSPFRoute);
     return returnValue;
 }
+
+void Bgp::addToDenyList(const char * addr6c, int flag)
+{
+    std::string add6 = addr6c;
+    std::string prefix6 = add6.substr(0, add6.find("/"));
+    int prefLength;
+    Ipv6Address address6;
+    if (!(address6.tryParseAddrWithPrefix(addr6c, prefLength)))
+         throw cRuntimeError("Cannot parse Ipv6 address: '%s", addr6c);
+
+    address6 = Ipv6Address(prefix6.c_str());
+
+    RoutingTableEntry6 * entry = new RoutingTableEntry6();
+    entry->setDestination(address6);
+    entry->setPrefixLength(prefLength);
+
+    if (flag == 0)
+        _prefixListIN6.push_back(entry);
+    else if (flag == 1)
+        _prefixListOUT6.push_back(entry);
+    else if (flag == 2)
+        _prefixList6.push_back(entry);
+
+}
 //parse input XML
 void Bgp::loadTimerConfig(cXMLElementList& timerConfig, simtime_t *delayTab)
 {
@@ -731,108 +778,6 @@ void Bgp::loadTimerConfig(cXMLElementList& timerConfig, simtime_t *delayTab)
     }
 }
 
-//AsId Bgp::findMyAS(cXMLElementList& asList, int& outRouterPosition)
-//{
-//    // find my own Ipv4 address in the configuration file and return the AS id under which it is configured
-//    // and also the 1 based position of the entry inside the AS config element
-//    for (auto & elem : asList) {
-//        cXMLElementList routerList = (elem)->getChildrenByTagName("Router");
-//        outRouterPosition = 1;
-//        for (auto & routerList_routerListIt : routerList) {
-//            Ipv4Address routerAddr = Ipv4Address((routerList_routerListIt)->getAttribute("interAddr"));
-//            for (int i = 0; i < _inft->getNumInterfaces(); i++) {
-//                if (_inft->getInterface(i)->ipv4Data()->getIPAddress() == routerAddr)
-//                    return atoi((routerList_routerListIt)->getParentNode()->getAttribute("id"));
-//            }
-//            outRouterPosition++;
-//        }
-//    }
-//
-//    return 0;
-//}
-
-//void Bgp::loadSessionConfig(cXMLElementList& sessionList, simtime_t *delayTab)
-//{
-//    simtime_t saveStartDelay = delayTab[3];
-//    for (auto sessionListIt = sessionList.begin(); sessionListIt != sessionList.end(); sessionListIt++, delayTab[3] = saveStartDelay) {
-//        const char *exterAddr = (*sessionListIt)->getFirstChild()->getAttribute("exterAddr");
-//        Ipv4Address routerAddr1 = Ipv4Address(exterAddr);
-//        exterAddr = (*sessionListIt)->getLastChild()->getAttribute("exterAddr");
-//        Ipv4Address routerAddr2 = Ipv4Address(exterAddr);
-//        if (isInInterfaceTable(_inft, routerAddr1) == -1 && isInInterfaceTable(_inft, routerAddr2) == -1) {
-//            continue;
-//        }
-//        Ipv4Address peerAddr;
-//        if (isInInterfaceTable(_inft, routerAddr1) != -1) {
-//            peerAddr = routerAddr2;
-//            delayTab[3] += atoi((*sessionListIt)->getAttribute("id"));
-//        }
-//        else {
-//            peerAddr = routerAddr1;
-//            delayTab[3] += atoi((*sessionListIt)->getAttribute("id")) + 0.5;
-//        }
-//
-//        if (peerAddr.isUnspecified()) {
-//            throw cRuntimeError("BGP Error: No valid external address for session ID : %s", (*sessionListIt)->getAttribute("id"));
-//        }
-//
-//        SessionId newSessionID = createSession(EGP, peerAddr.str().c_str());
-//        _BGPSessions[newSessionID]->setTimers(delayTab);
-//        TcpSocket *socketListenEGP = new TcpSocket();
-//        _BGPSessions[newSessionID]->setSocketListen(socketListenEGP);
-//    }
-//}
-
-//std::vector<const char *> Bgp::loadASConfig(cXMLElementList& ASConfig)
-//{
-//    //create deny Lists
-//    std::vector<const char *> routerInSameASList;
-//
-//    for (auto & elem : ASConfig) {
-//        std::string nodeName = (elem)->getTagName();
-//        if (nodeName == "Router") {
-//            if (isInInterfaceTable(_inft, Ipv4Address((elem)->getAttribute("interAddr"))) == -1) {
-//                routerInSameASList.push_back((elem)->getAttribute("interAddr"));
-//            }
-//            continue;
-//        }
-//        if (nodeName == "DenyRoute" || nodeName == "DenyRouteIN" || nodeName == "DenyRouteOUT") {
-//            RoutingTableEntry *entry = new RoutingTableEntry();     //FIXME Who will delete this entry?
-//            entry->setDestination(Ipv4Address((elem)->getAttribute("Address")));
-//            entry->setNetmask(Ipv4Address((elem)->getAttribute("Netmask")));
-//            if (nodeName == "DenyRouteIN") {
-//                _prefixListIN.push_back(entry);
-//                _prefixListINOUT.push_back(entry);
-//            }
-//            else if (nodeName == "DenyRouteOUT") {
-//                _prefixListOUT.push_back(entry);
-//                _prefixListINOUT.push_back(entry);
-//            }
-//            else {
-//                _prefixListIN.push_back(entry);
-//                _prefixListOUT.push_back(entry);
-//                _prefixListINOUT.push_back(entry);
-//            }
-//        }
-//        else if (nodeName == "DenyAS" || nodeName == "DenyASIN" || nodeName == "DenyASOUT") {
-//            AsId ASCur = atoi((elem)->getNodeValue());
-//            if (nodeName == "DenyASIN") {
-//                _ASListIN.push_back(ASCur);
-//            }
-//            else if (nodeName == "DenyASOUT") {
-//                _ASListOUT.push_back(ASCur);
-//            }
-//            else {
-//                _ASListIN.push_back(ASCur);
-//                _ASListOUT.push_back(ASCur);
-//            }
-//        }
-//        else {
-//            throw cRuntimeError("BGP Error: unknown element named '%s' for AS %u", nodeName.c_str(), _myAS);
-//        }
-//    }
-//    return routerInSameASList;
-//}
 void Bgp::routerIntfAndRouteConfig(cXMLElement *rtrConfig)
 {
     cXMLElementList interfaceList = rtrConfig->getElementsByTagName("Interface");
@@ -944,10 +889,59 @@ void Bgp::loadBgpNodeConfig(cXMLElement *bgpNode, simtime_t *delayTab, int pos)
         if(strcmp((elem)->getAttribute("id"), "Ipv4") == 0) {
             cXMLElementList networkNodes = elem->getElementsByTagName("Network");
             cXMLElementList neighborNodes = elem->getElementsByTagName("Neighbor");
-            for (auto & network : networkNodes) {
-                _networksToAdvertise.push_back(Ipv4Address((network)->getAttribute("Addr")));
 
-                int i = isInRoutingTable(_rt, Ipv4Address((network)->getAttribute("Addr")));
+            cXMLElementList denyRouteIn = elem->getElementsByTagName("DenyRouteIN");
+            cXMLElementList denyRouteOut = elem->getElementsByTagName("DenyRouteOUT");
+            cXMLElementList denyRoute = elem->getElementsByTagName("DenyRoute");
+            cXMLElementList denyAsIn = elem->getElementsByTagName("DenyASIN");
+            cXMLElementList denyAsOut = elem->getElementsByTagName("DenyASOUT");
+            cXMLElementList denyAs = elem->getElementsByTagName("DenyAS");
+
+            for (auto & route : denyRouteIn) {
+                RoutingTableEntry *entry = new RoutingTableEntry();
+                entry->setDestination(Ipv4Address((route)->getAttribute("address")));
+                entry->setNetmask(Ipv4Address((route)->getAttribute("netmask")));
+
+                _prefixListIN.push_back(entry);
+            }
+
+            for (auto & route : denyRouteOut) {
+                RoutingTableEntry *entry = new RoutingTableEntry();
+                entry->setDestination(Ipv4Address((route)->getAttribute("address")));
+                entry->setNetmask(Ipv4Address((route)->getAttribute("netmask")));
+
+                _prefixListOUT.push_back(entry);
+            }
+
+            for (auto & route : denyRoute) {
+                RoutingTableEntry *entry = new RoutingTableEntry();
+                entry->setDestination(Ipv4Address((route)->getAttribute("address")));
+                entry->setNetmask(Ipv4Address((route)->getAttribute("netmask")));
+
+                _prefixList.push_back(entry);
+            }
+
+            for (auto & as : denyAsIn) {
+                AsId ASCur = atoi((as)->getAttribute("as"));
+                _ASListIN.push_back(ASCur);
+            }
+
+            for (auto & as : denyAsOut) {
+                AsId ASCur = atoi((as)->getAttribute("as"));
+                _ASListOUT.push_back(ASCur);
+            }
+
+            for (auto & as : denyAs) {
+                AsId ASCur = atoi((as)->getAttribute("as"));
+                _ASListIN.push_back(ASCur);
+                _ASListOUT.push_back(ASCur);
+            }
+
+
+            for (auto & network : networkNodes) {
+                _networksToAdvertise.push_back(Ipv4Address((network)->getAttribute("address")));
+
+                int i = isInRoutingTable(_rt, Ipv4Address((network)->getAttribute("address")));
                 if (i != -1) {
                     const Ipv4Route *rtEntry = _rt->getRoute(i);
                     //std::cout<<rtEntry->getGateway()<<std::endl;
@@ -962,18 +956,18 @@ void Bgp::loadBgpNodeConfig(cXMLElement *bgpNode, simtime_t *delayTab, int pos)
 
             for (auto & neighbor : neighborNodes) {
                 if (atoi((neighbor)->getAttribute("remote-as")) == _myAS) {
-                    _routerInSameASList.push_back((neighbor)->getAttribute("Addr"));
+                    _routerInSameASList.push_back((neighbor)->getAttribute("address"));
                 } else {
                     //start EGP sessions
 
-                    Ipv4Address peerAddr = Ipv4Address((neighbor)->getAttribute("Addr"));
+                    Ipv4Address peerAddr = Ipv4Address((neighbor)->getAttribute("address"));
 
                     if((_rt->getInterfaceForDestAddr(peerAddr)->getIpv4Address()).getInt() < peerAddr.getInt()){
                         delayTab[3] += pos;
                     } else {
                         delayTab[3] += pos;
                     }
-                    std::cout<<delayTab[3]<<" router IPV4 extern *************** " << getParentModule()->getName() << std::endl;
+                    //std::cout<<delayTab[3]<<" router IPV4 extern *************** " << getParentModule()->getName() << std::endl;
                     SessionId newSessionID = createSession(EGP, peerAddr.str().c_str());
                     _BGPSessions[newSessionID]->setTimers(delayTab);
                     TcpSocket *socketListenEGP = new TcpSocket();
@@ -985,10 +979,46 @@ void Bgp::loadBgpNodeConfig(cXMLElement *bgpNode, simtime_t *delayTab, int pos)
         } else if(strcmp((elem)->getAttribute("id"), "Ipv6") == 0) { //Ipv6 address family
             cXMLElementList networkNodes = elem->getElementsByTagName("Network");
             cXMLElementList neighborNodes = elem->getElementsByTagName("Neighbor");
-            for (auto & network : networkNodes) {
-                _networksToAdvertise6.push_back(Ipv6Address((network)->getAttribute("Addr")));
 
-                int i = isInRoutingTable6(_rt6, Ipv6Address((network)->getAttribute("Addr")));
+            cXMLElementList denyRouteIn = elem->getElementsByTagName("DenyRouteIN");
+            cXMLElementList denyRouteOut = elem->getElementsByTagName("DenyRouteOUT");
+            cXMLElementList denyRoute = elem->getElementsByTagName("DenyRoute");
+            cXMLElementList denyAsIn = elem->getElementsByTagName("DenyASIN");
+            cXMLElementList denyAsOut = elem->getElementsByTagName("DenyASOUT");
+            cXMLElementList denyAs = elem->getElementsByTagName("DenyAS");
+
+            for (auto & route : denyRouteIn) {
+                addToDenyList(route->getAttribute("address"), 0);
+            }
+
+            for (auto & route : denyRouteOut) {
+                addToDenyList(route->getAttribute("address"), 1);
+            }
+
+            for (auto & route : denyRoute) {
+                addToDenyList(route->getAttribute("address"), 2);
+            }
+
+            for (auto & as : denyAsIn) {
+                AsId ASCur = atoi((as)->getAttribute("as"));
+                _ASListIN6.push_back(ASCur);
+            }
+
+            for (auto & as : denyAsOut) {
+                AsId ASCur = atoi((as)->getAttribute("as"));
+                _ASListOUT6.push_back(ASCur);
+            }
+
+            for (auto & as : denyAs) {
+                AsId ASCur = atoi((as)->getAttribute("as"));
+                _ASListIN6.push_back(ASCur);
+                _ASListOUT6.push_back(ASCur);
+            }
+
+            for (auto & network : networkNodes) {
+                _networksToAdvertise6.push_back(Ipv6Address((network)->getAttribute("address")));
+
+                int i = isInRoutingTable6(_rt6, Ipv6Address((network)->getAttribute("address")));
                if (i != -1) {
                    const Ipv6Route *rtEntry = _rt6->getRoute(i);
                    RoutingTableEntry6 *BGPEntry = new RoutingTableEntry6(rtEntry);
@@ -1002,11 +1032,11 @@ void Bgp::loadBgpNodeConfig(cXMLElement *bgpNode, simtime_t *delayTab, int pos)
 
             for (auto & neighbor : neighborNodes) {
                 if (atoi((neighbor)->getAttribute("remote-as")) == _myAS) {
-                    _routerInSameASList6.push_back((neighbor)->getAttribute("Addr"));
+                    _routerInSameASList6.push_back((neighbor)->getAttribute("address"));
                 } else {
                     //start EGP sessions
 
-                    Ipv6Address peerAddr = Ipv6Address((neighbor)->getAttribute("Addr"));
+                    Ipv6Address peerAddr = Ipv6Address((neighbor)->getAttribute("address"));
 
                    if(_rt6->getOutputInterfaceForDestination(peerAddr)->ipv6Data()->getGlblAddress().compare(peerAddr) < 0){
                        delayTab[3] += pos + 0.5;
@@ -1015,7 +1045,7 @@ void Bgp::loadBgpNodeConfig(cXMLElement *bgpNode, simtime_t *delayTab, int pos)
                    }
 
                    //std::cout<<"delay " << delayTab[3] <<std::endl;
-                   std::cout<<delayTab[3]<<" router IPV6 extern *************** " << getParentModule()->getName() << std::endl;
+                  // std::cout<<delayTab[3]<<" router IPV6 extern *************** " << getParentModule()->getName() << std::endl;
                    SessionId newSessionID = createSession6(EGP, peerAddr.str().c_str());
                    _BGPSessions[newSessionID]->setTimers(delayTab);
                    TcpSocket *socketListenEGP = new TcpSocket();
@@ -1094,7 +1124,7 @@ void Bgp::loadConfigFromXML(cXMLElement *config)
             }
             delayTab[3] += calculateStartDelay(_routerInSameASList.size(), routerPosition, routerPeerPosition);
 
-            std::cout<<delayTab[3]<<" router -------------------------------------++++++ " << getParentModule()->getName() << std::endl;
+           // std::cout<<delayTab[3]<<" router -------------------------------------++++++ " << getParentModule()->getName() << std::endl;
 
             _BGPSessions[newSessionID]->setTimers(delayTab);
             _BGPSessions[newSessionID]->setSocketListen(socketListenIGP);
@@ -1110,7 +1140,7 @@ void Bgp::loadConfigFromXML(cXMLElement *config)
             TcpSocket *socketListenIGP = new TcpSocket();
             newSessionID = createSession6(IGP, (*it));
             delayTab[3] += calculateStartDelay(_routerInSameASList6.size(), routerPosition, routerPeerPosition);
-            std::cout<<delayTab[3]<<" router IPV6 inter *************** " << getParentModule()->getName() << std::endl;
+           // std::cout<<delayTab[3]<<" router IPV6 inter *************** " << getParentModule()->getName() << std::endl;
             _BGPSessions[newSessionID]->setTimers(delayTab);
             _BGPSessions[newSessionID]->setSocketListen(socketListenIGP);
         }
@@ -1363,7 +1393,7 @@ unsigned long Bgp::isInTable6(std::vector<RoutingTableEntry6 *> rtTable, Routing
 {
     for (unsigned long i = 0; i < rtTable.size(); i++) {
         RoutingTableEntry6 *entryCur = rtTable[i];
-        if (entry->getDestPrefix().compare(entryCur->getDestPrefix()) == 0)
+        if (entry->getDestPrefix().getPrefix(entry->getPrefixLength()).compare(entryCur->getDestPrefix().getPrefix(entryCur->getPrefixLength())) == 0)
         {
             return i;
         }
