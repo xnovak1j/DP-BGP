@@ -79,7 +79,7 @@ void Bgp::initialize(int stage)
         _rt6 = getModuleFromPar<Ipv6RoutingTable>(par("routingTableModule6"), this);
 
         // read BGP configuration
-        cXMLElement *config = par("config");
+        cXMLElement *config = par("bgpConfig");
         loadConfigFromXML(config);
         createWatch("myAutonomousSystem", _myAS);
         WATCH_PTRVECTOR(_BGPRoutingTable);
