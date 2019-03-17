@@ -604,6 +604,29 @@ void Established::UpdateMsgEvent()
     //- remains in the Established state.
 }
 
+void Established::exit()
+{
+    std::cout << "Established::exit" << std::endl;
+
+//    BgpSession& session = TopState::box().getModule();
+//
+//       if (session.isMultiAddress()) {
+//           std::cout<< "From Peer: "<<session.getPeerAddr6() << std::endl;
+//           for (auto & network : session.getNetworksFromPeer6())
+//           {
+//               std::cout<< network << std::endl;
+//           }
+//       } else {
+//           std::cout<< "From Peer: "<<session.getPeerAddr() << std::endl;
+//           for (auto & network : session.getNetworksFromPeer())
+//           {
+//               std::cout<< network << std::endl;
+//           }
+//       }
+
+
+}
+
 } // namespace fsm
 
 } // namespace bgp

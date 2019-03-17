@@ -217,7 +217,7 @@ SUBSTATE(Established, TopState) {
 
   private:
     void entry() override;
-    void exit() override { std::cout << "Established::exit" << std::endl; }
+    void exit() override;
 };
 
 } // namespace fsm

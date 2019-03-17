@@ -189,6 +189,9 @@ class INET_API Bgp : public cSimpleModule, public ILifecycle, public TcpSocket::
     std::vector<const char *> _routerInSameASList;
     std::vector<const char *> _routerInSameASList6;
 
+//    std::map<Ipv4Address, std::vector<Ipv4Address>> _routesFromPeer;
+//    std::map<Ipv6Address, std::vector<Ipv6Address>> _routesFromPeer6;
+
 
     static const int BGP_TCP_CONNECT_VALID = 71;
     static const int BGP_TCP_CONNECT_CONFIRM = 72;

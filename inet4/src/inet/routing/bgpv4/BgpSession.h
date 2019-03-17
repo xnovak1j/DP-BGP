@@ -52,6 +52,8 @@ class INET_API BgpSession : public cObject
     SessionId findAndStartNextSessionTmp(BgpSessionType type) { return _bgpRouting.findNextSession(type, false); }
 
     //setters for creating and editing the information in the Bgp session:
+    void setNetworkFromPeer(Ipv4Address address);
+    void setNetworkFromPeer6(Ipv6Address address);
     void setInfo(SessionInfo info);
     void setTimers(simtime_t *delayTab);
     void setlinkIntf(InterfaceEntry *intf) { _info.linkIntf = intf; }
@@ -85,6 +87,10 @@ class INET_API BgpSession : public cObject
     int isInRoutingTable(Ipv4Address network) { return _bgpRouting.isInRoutingTable( _bgpRouting.getIPRoutingTable(), network); }
     int isInRoutingTable6(Ipv6Address network) { return _bgpRouting.isInRoutingTable6( _bgpRouting.getIPRoutingTable6(), network); }
     // const char * getDeviceName() { return _bgpRouting.getParentModule()->getName(); }
+
+    std::vector<Ipv4Address> getNetworksFromPeer() { return _info.routesFromPeer; }
+    std::vector<Ipv6Address> getNetworksFromPeer6() { return _info.routesFromPeer6; }
+   // bool deleteFromRT()
 
   private:
     SessionInfo _info;

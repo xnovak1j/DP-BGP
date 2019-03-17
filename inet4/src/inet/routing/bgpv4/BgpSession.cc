@@ -48,6 +48,17 @@ BgpSession::~BgpSession()
     delete _fsm;
 }
 
+void BgpSession::setNetworkFromPeer(Ipv4Address address)
+{
+    _info.routesFromPeer.push_back(address);
+}
+
+void BgpSession::setNetworkFromPeer6(Ipv6Address address)
+{
+    _info.routesFromPeer6.push_back(address);
+}
+
+
 void BgpSession::setInfo(SessionInfo info)
 {
     _info.multiAddress = info.multiAddress;

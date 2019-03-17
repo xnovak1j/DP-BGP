@@ -68,6 +68,7 @@ network BGPTestLoopback
             addDefaultRoutes = false;
             addSubnetRoutes = false;
         }
+        
 
  //       configurator6: Ipv6FlatNetworkConfigurator {
 //            @display("p=150,20;is=s");

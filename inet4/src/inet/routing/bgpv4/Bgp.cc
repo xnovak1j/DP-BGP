@@ -399,6 +399,9 @@ unsigned char Bgp::decisionProcess(const BgpUpdateMessage& msg, RoutingTableEntr
             _BGPRoutingTable.push_back(entry);
             _rt->addRoute(entry);
 
+            _BGPSessions[sessionIndex]->setNetworkFromPeer(entry->getDestination());
+          //  _routesFromPeer[_BGPSessions[sessionIndex]->getPeerAddr()].push_back(entry->getDestination());
+
             return ROUTE_DESTINATION_CHANGED;
         }
     }
@@ -420,6 +423,9 @@ unsigned char Bgp::decisionProcess(const BgpUpdateMessage& msg, RoutingTableEntr
             newEntry->setSourceType(IRoute::BGP);
             _rt->deleteRoute(oldEntry);
             _rt->addRoute(newEntry);
+
+            _BGPSessions[sessionIndex]->setNetworkFromPeer(newEntry->getDestination());
+           // _routesFromPeer[_BGPSessions[sessionIndex]->getPeerAddr()].push_back(newEntry->getDestination());
             //FIXME model error: the RoutingTableEntry *entry will be stored in _BGPRoutingTable, but not stored in _rt, memory leak
             //FIXME model error: The entry inserted to _BGPRoutingTable, but newEntry inserted to _rt; entry and newEntry are differ.
         }
@@ -427,28 +433,33 @@ unsigned char Bgp::decisionProcess(const BgpUpdateMessage& msg, RoutingTableEntr
 
     entry->setInterface(_BGPSessions[sessionIndex]->getLinkIntf());
     _BGPRoutingTable.push_back(entry);
+    _rt->addRoute(entry);
 
-    if (_BGPSessions[sessionIndex]->getType() == IGP) {
-        _rt->addRoute(entry);
-        //std::cout<<entry->getSourceType()<<std::endl;
-    }
+    _BGPSessions[sessionIndex]->setNetworkFromPeer(entry->getDestination());
 
-    if (_BGPSessions[sessionIndex]->getType() == EGP) {
-        std::string entryh = entry->getDestination().str();
-        std::string entryn = entry->getNetmask().str();
-        _rt->addRoute(entry);
-        //insertExternalRoute on OSPF ExternalRoutingTable if OSPF exist on this BGP router
-//        if (ospfExist(_rt)) {
-//            ospf::Ipv4AddressRange OSPFnetAddr;
-//            OSPFnetAddr.address = entry->getDestination();
-//            OSPFnetAddr.mask = entry->getNetmask();
-//            ospf::Ospf *ospf = getModuleFromPar<ospf::Ospf>(par("ospfRoutingModule"), this);
-//            InterfaceEntry *ie = entry->getInterface();
-//            if (!ie)
-//                throw cRuntimeError("Model error: interface entry is nullptr");
-//            ospf->insertExternalRoute(ie->getInterfaceId(), OSPFnetAddr);
-//        }
-    }
+    //_routesFromPeer[_BGPSessions[sessionIndex]->getPeerAddr()].push_back(entry->getDestination());
+
+//    if (_BGPSessions[sessionIndex]->getType() == IGP) {
+//        _rt->addRoute(entry);
+//        //std::cout<<entry->getSourceType()<<std::endl;
+//    }
+//
+//    if (_BGPSessions[sessionIndex]->getType() == EGP) {
+//        std::string entryh = entry->getDestination().str();
+//        std::string entryn = entry->getNetmask().str();
+//        _rt->addRoute(entry);
+//        //insertExternalRoute on OSPF ExternalRoutingTable if OSPF exist on this BGP router
+////        if (ospfExist(_rt)) {
+////            ospf::Ipv4AddressRange OSPFnetAddr;
+////            OSPFnetAddr.address = entry->getDestination();
+////            OSPFnetAddr.mask = entry->getNetmask();
+////            ospf::Ospf *ospf = getModuleFromPar<ospf::Ospf>(par("ospfRoutingModule"), this);
+////            InterfaceEntry *ie = entry->getInterface();
+////            if (!ie)
+////                throw cRuntimeError("Model error: interface entry is nullptr");
+////            ospf->insertExternalRoute(ie->getInterfaceId(), OSPFnetAddr);
+////        }
+//    }
     return NEW_ROUTE_ADDED;     //FIXME model error: When returns NEW_ROUTE_ADDED then entry stored in _BGPRoutingTable, but sometimes not stored in _rt
 }
 
@@ -479,6 +490,9 @@ unsigned char Bgp::decisionProcess6(const BgpUpdateMessage6& msg, RoutingTableEn
             _BGPRoutingTable6.push_back(entry);
             _rt6->addRoutingProtocolRoute(entry);
 
+            _BGPSessions[sessionIndex]->setNetworkFromPeer6(entry->getDestPrefix());
+           // _routesFromPeer6[_BGPSessions[sessionIndex]->getPeerAddr6()].push_back(entry->getDestPrefix());
+
             return ROUTE_DESTINATION_CHANGED;
         }
     }
@@ -501,6 +515,9 @@ unsigned char Bgp::decisionProcess6(const BgpUpdateMessage6& msg, RoutingTableEn
             _rt6->deleteRoute(oldEntry);
             _rt6->addRoutingProtocolRoute(newEntry);
 
+            _BGPSessions[sessionIndex]->setNetworkFromPeer6(newEntry->getDestPrefix());
+           // _routesFromPeer6[_BGPSessions[sessionIndex]->getPeerAddr6()].push_back(newEntry->getDestPrefix());
+
             //FIXME model error: the RoutingTableEntry *entry will be stored in _BGPRoutingTable, but not stored in _rt, memory leak
             //FIXME model error: The entry inserted to _BGPRoutingTable, but newEntry inserted to _rt; entry and newEntry are differ.
         }
@@ -508,26 +525,30 @@ unsigned char Bgp::decisionProcess6(const BgpUpdateMessage6& msg, RoutingTableEn
 
     entry->setInterface(_BGPSessions[sessionIndex]->getLinkIntf());
     _BGPRoutingTable6.push_back(entry);
+    _rt6->addRoutingProtocolRoute(entry);
 
-    if (_BGPSessions[sessionIndex]->getType() == IGP) {
-        _rt6->addRoutingProtocolRoute(entry);
-        //std::cout<<entry->getSourceType()<<std::endl;
-    }
+    _BGPSessions[sessionIndex]->setNetworkFromPeer6(entry->getDestPrefix());
+   // _routesFromPeer6[_BGPSessions[sessionIndex]->getPeerAddr6()].push_back(entry->getDestPrefix());
 
-    if (_BGPSessions[sessionIndex]->getType() == EGP) {
-        _rt6->addRoutingProtocolRoute(entry);
-        //insertExternalRoute on OSPF ExternalRoutingTable if OSPF exist on this BGP router
-//        if (ospfExist(_rt)) {
-//            ospf::Ipv4AddressRange OSPFnetAddr;
-//            OSPFnetAddr.address = entry->getDestination();
-//            OSPFnetAddr.mask = entry->getNetmask();
-//            ospf::Ospf *ospf = getModuleFromPar<ospf::Ospf>(par("ospfRoutingModule"), this);
-//            InterfaceEntry *ie = entry->getInterface();
-//            if (!ie)
-//                throw cRuntimeError("Model error: interface entry is nullptr");
-//            ospf->insertExternalRoute(ie->getInterfaceId(), OSPFnetAddr);
-//        }
-    }
+//    if (_BGPSessions[sessionIndex]->getType() == IGP) {
+//        _rt6->addRoutingProtocolRoute(entry);
+//        //std::cout<<entry->getSourceType()<<std::endl;
+//    }
+//
+//    if (_BGPSessions[sessionIndex]->getType() == EGP) {
+//        _rt6->addRoutingProtocolRoute(entry);
+//        //insertExternalRoute on OSPF ExternalRoutingTable if OSPF exist on this BGP router
+////        if (ospfExist(_rt)) {
+////            ospf::Ipv4AddressRange OSPFnetAddr;
+////            OSPFnetAddr.address = entry->getDestination();
+////            OSPFnetAddr.mask = entry->getNetmask();
+////            ospf::Ospf *ospf = getModuleFromPar<ospf::Ospf>(par("ospfRoutingModule"), this);
+////            InterfaceEntry *ie = entry->getInterface();
+////            if (!ie)
+////                throw cRuntimeError("Model error: interface entry is nullptr");
+////            ospf->insertExternalRoute(ie->getInterfaceId(), OSPFnetAddr);
+////        }
+//    }
     return NEW_ROUTE_ADDED;     //FIXME model error: When returns NEW_ROUTE_ADDED then entry stored in _BGPRoutingTable, but sometimes not stored in _rt
 }
 

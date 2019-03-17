@@ -6,8 +6,7 @@
         <holdTime> 180 </holdTime>
         <keepAliveTime> 60 </keepAliveTime>
         <startDelay> 15 </startDelay>
-    </TimerParams>
-    
+    </TimerParams>    
     <Devices>
     	<Router name="R1" id="100.0.1.1">
     		<Interfaces>
@@ -22,12 +21,11 @@
     		</Interfaces>
     		<Bgp as="100">
     			<Address-family id="Ipv4">
-    				<!--DenyRouteIN address="200.0.2.0" netmask="255.255.255.0"/>	
-    				<DenyRouteOUT address="172.10.8.0" netmask="255.255.255.0"/>
-    				<DenyRoute address="172.10.8.0" netmask="255.255.255.0"/>
+    				<!--DenyRouteIN address="200.0.2.0" netmask="255.255.255.0" />	
+    				<DenyRouteOUT address="172.10.8.0" netmask="255.255.255.0" />
+    				<DenyRoute address="172.10.8.0" netmask="255.255.255.0" />
     				<DenyASIN as="200" />
-    				<DenyASOUT as="100" / -->
-    				
+    				<DenyASOUT as="100" / --> 				
     				<Neighbor address="10.0.12.2" remote-as="200" />
     				<Network address="100.0.1.0" />
     			</Address-family>
@@ -35,8 +33,7 @@
     				<!-- DenyRouteIN address="fd00:12:12::0/127" />
     				<DenyRouteOUT address="fd00:12:12::0/127" />
     				<DenyRoute address="fd00:12:12::0/127" / >
-    				<DenyAS as="300" / -->
-    			
+    				<DenyAS as="300" / -->   			
     				<Neighbor address="fd00:12:12::1" remote-as="200" />
     				<Network address="fd00:100:0:100::" />
     			</Address-family>
