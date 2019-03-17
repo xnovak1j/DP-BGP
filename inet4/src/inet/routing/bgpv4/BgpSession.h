@@ -90,7 +90,9 @@ class INET_API BgpSession : public cObject
 
     std::vector<Ipv4Address> getNetworksFromPeer() { return _info.routesFromPeer; }
     std::vector<Ipv6Address> getNetworksFromPeer6() { return _info.routesFromPeer6; }
-   // bool deleteFromRT()
+
+    bool deleteFromRT(Ipv4Route *entry) { return _bgpRouting.deleteBGPRoutingEntry(static_cast<RoutingTableEntry *>(entry)); }
+    bool deleteFromRT6(Ipv6Route *entry) { return _bgpRouting.deleteBGPRoutingEntry6(static_cast<RoutingTableEntry6 *>(entry)); }
 
   private:
     SessionInfo _info;

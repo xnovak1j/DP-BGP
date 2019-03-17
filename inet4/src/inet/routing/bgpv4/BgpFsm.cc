@@ -543,11 +543,36 @@ void Established::ConnectRetryTimer_Expires()
 void Established::HoldTimer_Expires()
 {
     EV_TRACE << "Processing Established::HoldTimer_Expires" << std::endl;
+
+    std::cout<< "Established::holdTimer_Expires"<< std::endl;
+
     BgpSession& session = TopState::box().getModule();
     //If the HoldTimer_Expires event occurs (Event 10), the local system:
     //- sets the ConnectRetryTimer to zero,
     session.restartsConnectRetryTimer(false);
     //- releases all BGP resources,
+
+    if (session.isMultiAddress()) {
+       //std::cout<< "From Peer: "<<session.getPeerAddr6() << std::endl;
+       for (auto & network : session.getNetworksFromPeer6())
+       {
+           //std::cout<< network << std::endl;
+           int i = session.isInRoutingTable6(network);
+           if(session.deleteFromRT6(session.getIPRoutingTable6()->getRoute(i)))
+               std::cout<<"deleted route" <<std::endl;
+       }
+    } else {
+       //std::cout<< "From Peer: "<<session.getPeerAddr() << std::endl;
+       for (auto & network : session.getNetworksFromPeer())
+       {
+           //std::cout<< network << std::endl;
+           int i = session.isInRoutingTable(network);
+           if(session.deleteFromRT(session.getIPRoutingTable()->getRoute(i)))
+               std::cout<<"deleted route" <<std::endl;
+       }
+}
+
+
     //- drops the TCP connection,
     session._info.socket->abort();
     //- increments the ConnectRetryCounter by 1,
@@ -588,7 +613,10 @@ void Established::KeepAliveMsgEvent()
     session._keepAliveMsgRcv++;
     //If the local system receives a KEEPALIVE message (Event 26), the local system:
     //- restarts its HoldTimer, if the negotiated HoldTime value is non-zero, and
-    session.restartsHoldTimer();
+
+//!!!!!!!!!!!! testing
+//    session.restartsHoldTimer();
+
     //- remains in the Established state.
 }
 
