@@ -111,6 +111,16 @@ void BgpSession::startConnection()
     }
 }
 
+void BgpSession::restartConnection()
+{
+    if (_ptrStartEvent == nullptr) {
+        _ptrStartEvent = new cMessage("BGP Start", START_EVENT_KIND);
+    }
+
+    _bgpRouting.getScheduleAt(_bgpRouting.getSimTime() + 15 , _ptrStartEvent);
+    _ptrStartEvent->setContextPointer(this);
+}
+
 void BgpSession::restartsHoldTimer()
 {
     if (_holdTime != 0) {

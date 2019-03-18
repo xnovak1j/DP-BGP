@@ -32,6 +32,17 @@ void TopState::init()
 }
 
 //RFC 4271 - 8.2.2.  Finite State Machine - IdleState
+void Idle::entry()
+{
+    std::cout << "Idle::entry" << std::endl;
+    BgpSession& session = TopState::box().getModule();
+
+    if (session._connectRetryCounter != 0) {
+        session._info.sessionEstablished = false;
+        session.restartConnection();
+    }
+}
+
 void Idle::ManualStart()
 {
     EV_INFO << "Processing Idle::event1" << std::endl;
@@ -95,7 +106,7 @@ void Connect::HoldTimer_Expires()
     //- drops the TCP connection,
     session._info.socket->abort();
     //- increments the ConnectRetryCounter by 1,
-    ++session._connectRetryCounter;
+    session._connectRetryCounter++;
     //- performs peer oscillation damping if the DampPeerOscillations attribute is set to True, and
     //- changes its state to Idle.
     setState<Idle>();
@@ -177,7 +188,7 @@ void Active::HoldTimer_Expires()
     //- drops the TCP connection,
     session._info.socket->abort();
     //- increments the ConnectRetryCounter by one,
-    ++session._connectRetryCounter;
+    session._connectRetryCounter++;
     //- changes its state to Idle.
     setState<Idle>();
 }
@@ -253,7 +264,7 @@ void OpenSent::ConnectRetryTimer_Expires()
     //- drops the TCP connection,
     session._info.socket->abort();
     //- increments the ConnectRetryCounter by one,
-    ++session._connectRetryCounter;
+    session._connectRetryCounter++;
     //- (optionally) performs peer oscillation damping if the DampPeerOscillations attribute is set to TRUE, and
     //- changes its state to Idle.
     setState<Idle>();
@@ -270,7 +281,7 @@ void OpenSent::HoldTimer_Expires()
     //- drops the TCP connection,
     session._info.socket->abort();
     //- increments the ConnectRetryCounter,
-    ++session._connectRetryCounter;
+    session._connectRetryCounter++;
     //- (optionally) performs peer oscillation damping if the DampPeerOscillations attribute is set to TRUE, and
     //- changes its state to Idle.
     setState<Idle>();
@@ -346,7 +357,7 @@ void OpenConfirm::ConnectRetryTimer_Expires()
     //- drops the TCP connection (send TCP FIN),
     session._info.socket->abort();
     //- increments the ConnectRetryCounter by 1,
-    ++session._connectRetryCounter;
+    session._connectRetryCounter++;
     //- changes its state to Idle.
     setState<Idle>();
 }
@@ -363,7 +374,7 @@ void OpenConfirm::HoldTimer_Expires()
     //- drops the TCP connection,
     session._info.socket->abort();
     //- increments the ConnectRetryCounter by 1,
-    ++session._connectRetryCounter;
+    session._connectRetryCounter++;
     //- changes its state to Idle.
     setState<Idle>();
 }
@@ -529,13 +540,40 @@ void Established::ConnectRetryTimer_Expires()
     BgpSession& session = TopState::box().getModule();
     //In response to any other event (Events 9, 12-13, 20-22), the local system:
 //TODO- deletes all routes associated with this connection,
+    if (session.isMultiAddress()) {
+        Ipv6Route *rtEntry;
+       //std::cout<< "From Peer: "<<session.getPeerAddr6() << std::endl;
+        for (auto & network : session.getNetworksFromPeer6())
+        {
+           //std::cout<< network << std::endl;
+           int i = session.isInRoutingTable6(network);
+           if (i != -1) {
+               rtEntry = session.getIPRoutingTable6()->getRoute(i);
+               session.updateSendWithdrawnProcess6(rtEntry);
+           }
+        }
+    } else {
+        Ipv4Route *rtEntry;
+       //std::cout<< "From Peer: "<<session.getPeerAddr() << std::endl;
+        for (auto & network : session.getNetworksFromPeer())
+        {
+           //std::cout<< network << std::endl;
+           int i = session.isInRoutingTable(network);
+           if (i != -1) {
+               rtEntry = session.getIPRoutingTable()->getRoute(i);
+               session.updateSendWithdrawnProcess(rtEntry);
+           }
+        }
+    }
+
+
     //- sets the ConnectRetryTimer to zero,
     session.restartsConnectRetryTimer(false);
     //- releases all BGP resources,
     //- drops the TCP connection,
     session._info.socket->abort();
     //- increments the ConnectRetryCounter by 1,
-    ++session._connectRetryCounter;
+    session._connectRetryCounter++;
     //- changes its state to Idle.
     setState<Idle>();
 }
@@ -580,9 +618,9 @@ void Established::HoldTimer_Expires()
 
 
     //- drops the TCP connection,
-//!!    session._info.socket->abort();
+    session._info.socket->abort();
     //- increments the ConnectRetryCounter by 1,
-    ++session._connectRetryCounter;
+    session._connectRetryCounter++;
     //- changes its state to Idle.
     setState<Idle>();
 }
@@ -631,13 +669,14 @@ void Established::KeepAliveMsgEvent()
     tmpipv4.set(ipv41);
 
    //std::cout << "peer " << session.getPeerAddr6() << " tmp " << tmpipv6 << std::endl;
-    if (session.isMultiAddress()){
-        if (session.getPeerAddr6() != tmpipv6){
+//    if (session.isMultiAddress()){
+////        if (session.getPeerAddr6() != tmpipv6){
             session.restartsHoldTimer();
-        }
-    } else if (!session.getPeerAddr().equals(tmpipv4)) {
-        session.restartsHoldTimer();
-    }
+//        }
+////    } else
+//    if (!session.getPeerAddr().equals(tmpipv4)) {
+//        session.restartsHoldTimer();
+//    }
 
     //else
      //   std::cout<<session.getDeviceName()<<std::endl;

@@ -40,6 +40,7 @@ class INET_API BgpSession : public cObject
     virtual ~BgpSession();
 
     void startConnection();
+    void restartConnection();
     void restartsHoldTimer();
     void restartsKeepAliveTimer();
     void restartsConnectRetryTimer(bool start = true);

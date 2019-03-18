@@ -130,7 +130,7 @@ SUBSTATE(Idle, TopState) {
     void ManualStart() override;
 
   private:
-    void entry() override { std::cout << "Idle::entry" << std::endl; }
+    void entry() override;
     void exit() override { std::cout << "Idle::exit" << std::endl; }
 };
 
