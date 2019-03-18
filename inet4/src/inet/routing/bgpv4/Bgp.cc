@@ -312,30 +312,40 @@ void Bgp::processMessage(const BgpUpdateMessage& msg)
     EV_INFO << "Processing BGP Update 4 message" << std::endl;
     _BGPSessions[_currSessionId]->getFSM()->UpdateMsgEvent();
 
-    unsigned char decisionProcessResult;
-    Ipv4Address netMask(Ipv4Address::ALLONES_ADDRESS);
-    RoutingTableEntry *entry = new RoutingTableEntry();
-    const unsigned char length = msg.getNLRI().length;
-    unsigned int ASValueCount = msg.getPathAttributeList(0).getAsPath(0).getValue(0).getAsValueArraySize();
+    if(msg.getWithdrawnRoutesLength() == 1) {
+        RoutingTableEntry *entry;
+        int i = isInRoutingTable(_rt, msg.getWithdrawnRoutes().prefix);
+        if (i != -1){
+            entry = static_cast<RoutingTableEntry *>(_rt->getRoute(i));
+            updateSendProcess(WITHDRAWN_ROUTE, _currSessionId, entry);
+        }
 
-    entry->setDestination(msg.getNLRI().prefix);
-    netMask = Ipv4Address::makeNetmask(length);
-    entry->setNetmask(netMask);
-    for (unsigned int j = 0; j < ASValueCount; j++) {
-        entry->addAS(msg.getPathAttributeList(0).getAsPath(0).getValue(0).getAsValue(j));
+    } else {
+        unsigned char decisionProcessResult;
+        Ipv4Address netMask(Ipv4Address::ALLONES_ADDRESS);
+        RoutingTableEntry *entry = new RoutingTableEntry();
+        const unsigned char length = msg.getNLRI().length;
+        unsigned int ASValueCount = msg.getPathAttributeList(0).getAsPath(0).getValue(0).getAsValueArraySize();
+
+        entry->setDestination(msg.getNLRI().prefix);
+        netMask = Ipv4Address::makeNetmask(length);
+        entry->setNetmask(netMask);
+        for (unsigned int j = 0; j < ASValueCount; j++) {
+            entry->addAS(msg.getPathAttributeList(0).getAsPath(0).getValue(0).getAsValue(j));
+        }
+
+        decisionProcessResult = asLoopDetection(entry, _myAS);
+
+        if (decisionProcessResult == ASLOOP_NO_DETECTED) {
+            // RFC 4271, 9.1.  Decision Process
+            decisionProcessResult = decisionProcess(msg, entry, _currSessionId);
+            //RFC 4271, 9.2.  Update-Send Process
+            if (decisionProcessResult != 0)
+                updateSendProcess(decisionProcessResult, _currSessionId, entry);
+        }
+        else
+            delete entry;
     }
-
-    decisionProcessResult = asLoopDetection(entry, _myAS);
-
-    if (decisionProcessResult == ASLOOP_NO_DETECTED) {
-        // RFC 4271, 9.1.  Decision Process
-        decisionProcessResult = decisionProcess(msg, entry, _currSessionId);
-        //RFC 4271, 9.2.  Update-Send Process
-        if (decisionProcessResult != 0)
-            updateSendProcess(decisionProcessResult, _currSessionId, entry);
-    }
-    else
-        delete entry;
 }
 
 void Bgp::processMessage(const BgpUpdateMessage6& msg)
@@ -343,32 +353,41 @@ void Bgp::processMessage(const BgpUpdateMessage6& msg)
     EV_INFO << "Processing BGP Update 6 message" << std::endl;
     _BGPSessions[_currSessionId]->getFSM()->UpdateMsgEvent();
 
-    unsigned char decisionProcessResult;
-    RoutingTableEntry6 *entry = new RoutingTableEntry6();
+    if (msg.getPathAttributeList(0).getMpUnreachNlri().getLength() != 0) {
+        RoutingTableEntry6 *entry;
+        int i = isInRoutingTable6(_rt6, msg.getPathAttributeList(0).getMpUnreachNlri().getMpUnreachNlriValue().getNLRI().prefix);
+        if (i != -1){
+            entry = static_cast<RoutingTableEntry6 *>(_rt6->getRoute(i));
+            updateSendProcess6(WITHDRAWN_ROUTE, _currSessionId, entry);
+        }
+    } else {
+        unsigned char decisionProcessResult;
+        RoutingTableEntry6 *entry = new RoutingTableEntry6();
 
-    const unsigned char length = msg.getPathAttributeList(0).getMpReachNlri().getMpReachNlriValue().getNLRI().length;
-    unsigned int ASValueCount = msg.getPathAttributeList(0).getAsPath(0).getValue(0).getAsValueArraySize();
+        const unsigned char length = msg.getPathAttributeList(0).getMpReachNlri().getMpReachNlriValue().getNLRI().length;
+        unsigned int ASValueCount = msg.getPathAttributeList(0).getAsPath(0).getValue(0).getAsValueArraySize();
 
-    entry->setDestination(msg.getPathAttributeList(0).getMpReachNlri().getMpReachNlriValue().getNLRI().prefix);
-    int prefLength = length;
+        entry->setDestination(msg.getPathAttributeList(0).getMpReachNlri().getMpReachNlriValue().getNLRI().prefix);
+        int prefLength = length;
 
-    entry->setPrefixLength(prefLength);
+        entry->setPrefixLength(prefLength);
 
-    for (unsigned int j = 0; j < ASValueCount; j++) {
-        entry->addAS(msg.getPathAttributeList(0).getAsPath(0).getValue(0).getAsValue(j));
+        for (unsigned int j = 0; j < ASValueCount; j++) {
+            entry->addAS(msg.getPathAttributeList(0).getAsPath(0).getValue(0).getAsValue(j));
+        }
+
+        decisionProcessResult = asLoopDetection6(entry, _myAS);
+
+        if (decisionProcessResult == ASLOOP_NO_DETECTED) {
+            // RFC 4271, 9.1.  Decision Process
+            decisionProcessResult = decisionProcess6(msg, entry, _currSessionId);
+            //RFC 4271, 9.2.  Update-Send Process
+            if (decisionProcessResult != 0)
+                updateSendProcess6(decisionProcessResult, _currSessionId, entry);
+        }
+        else
+            delete entry;
     }
-
-    decisionProcessResult = asLoopDetection6(entry, _myAS);
-
-    if (decisionProcessResult == ASLOOP_NO_DETECTED) {
-        // RFC 4271, 9.1.  Decision Process
-        decisionProcessResult = decisionProcess6(msg, entry, _currSessionId);
-        //RFC 4271, 9.2.  Update-Send Process
-        if (decisionProcessResult != 0)
-            updateSendProcess6(decisionProcessResult, _currSessionId, entry);
-    }
-    else
-        delete entry;
 }
 
 /* add entry to routing table, or delete entry */
@@ -600,68 +619,94 @@ void Bgp::updateSendProcess(const unsigned char type, SessionId sessionIndex, Ro
     for (auto & elem : _BGPSessions)
     {
         if((elem).second->isMultiAddress() == false) {
-            if (isInTable(_prefixListOUT, entry) != (unsigned long)-1 || isInTable(_prefixList, entry) != (unsigned long)-1 || isInASList(_ASListOUT, entry) ||
-                ((elem).first == sessionIndex && type != NEW_SESSION_ESTABLISHED) ||
-                (type == NEW_SESSION_ESTABLISHED && (elem).first != sessionIndex) ||
-                !(elem).second->isEstablished())
-            {
-                //std::cout<< getParentModule()->getName()<<" is in as list " << _ASListOUT.size() << std::endl;
-                continue;
-            }
-            if ((_BGPSessions[sessionIndex]->getType() == IGP && (elem).second->getType() == EGP) ||
-                _BGPSessions[sessionIndex]->getType() == EGP ||
-                type == ROUTE_DESTINATION_CHANGED ||
-                type == NEW_SESSION_ESTABLISHED)
-            {
-                BgpUpdateNlri NLRI;
-                BgpUpdatePathAttributeList content;
+            /*withdrawn route
+             * want to send withdrawn message to other peers
+             * */
+            if (type == WITHDRAWN_ROUTE && (elem).first != sessionIndex) {
+                if ((_BGPSessions[sessionIndex]->getType() == IGP && (elem).second->getType() == EGP) ||
+                    _BGPSessions[sessionIndex]->getType() == EGP) {
+                    BgpUpdateWithdrawnRoutes withdrawnRoutes;
+                    Ipv4Address netMask = entry->getNetmask();
+                    withdrawnRoutes.prefix = entry->getDestination().doAnd(netMask);
+                    withdrawnRoutes.length = (unsigned char)netMask.getNetmaskLength();
 
-                unsigned int nbAS = entry->getASCount();
-                content.setAsPathArraySize(1);
-
-                content.getAsPathForUpdate(0).setValueArraySize(1);
-                content.getAsPathForUpdate(0).getFlagsForUpdate().transitiveBit = true;
-                content.getAsPathForUpdate(0).getValueForUpdate(0).setType(AS_SEQUENCE);
-                //RFC 4271 : set My AS in first position if it is not already
-                if (entry->getAS(0) != _myAS) {
-                    content.getAsPathForUpdate(0).setLength(2+(4*(nbAS + 1)));
-                    content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValueArraySize(nbAS + 1);
-                    content.getAsPathForUpdate(0).getValueForUpdate(0).setLength(nbAS + 1);
-                    content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(0, _myAS);
-                    for (unsigned int j = 1; j < nbAS + 1; j++) {
-                        content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(j, entry->getAS(j - 1));
-                    }
-                }
-                else {
-                    content.getAsPathForUpdate(0).setLength(2+(4*nbAS));
-                    content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValueArraySize(nbAS);
-                    content.getAsPathForUpdate(0).getValueForUpdate(0).setLength(nbAS);
-                    for (unsigned int j = 0; j < nbAS; j++) {
-                        content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(j, entry->getAS(j));
-                    }
-                }
-
-                InterfaceEntry *iftEntry = (elem).second->getLinkIntf();
-                content.getOriginForUpdate().getFlagsForUpdate().transitiveBit = true;
-                content.getOriginForUpdate().setValue((elem).second->getType());
-                content.getNextHopForUpdate().getFlagsForUpdate().transitiveBit = true;
-                content.getNextHopForUpdate().setValue(iftEntry->ipv4Data()->getIPAddress());
-                Ipv4Address netMask = entry->getNetmask();
-                NLRI.prefix = entry->getDestination().doAnd(netMask);
-                NLRI.length = (unsigned char)netMask.getNetmaskLength();
-                {
                     Packet *pk = new Packet("BgpUpdate");
                     const auto& updateMsg = makeShared<BgpUpdateMessage>();
-                    updateMsg->setPathAttributeListArraySize(1);
-                    updateMsg->setPathAttributeList(content);
-                    updateMsg->setNLRI(NLRI);
+                    updateMsg->setWithdrawnRoutesLength(1);
+                    updateMsg->setWithdrawnRoutes(withdrawnRoutes);
                     pk->insertAtFront(updateMsg);
                     (elem).second->getSocket()->send(pk);
                     (elem).second->addUpdateMsgSent();
                 }
+
+            } else if ( type != WITHDRAWN_ROUTE ) {
+
+                if (isInTable(_prefixListOUT, entry) != (unsigned long)-1 || isInTable(_prefixList, entry) != (unsigned long)-1 || isInASList(_ASListOUT, entry) ||
+                    ((elem).first == sessionIndex && type != NEW_SESSION_ESTABLISHED) ||
+                    (type == NEW_SESSION_ESTABLISHED && (elem).first != sessionIndex) ||
+                    !(elem).second->isEstablished())
+                {
+                    //std::cout<< getParentModule()->getName()<<" is in as list " << _ASListOUT.size() << std::endl;
+                    continue;
+                }
+                if ((_BGPSessions[sessionIndex]->getType() == IGP && (elem).second->getType() == EGP) ||
+                    _BGPSessions[sessionIndex]->getType() == EGP ||
+                    type == ROUTE_DESTINATION_CHANGED ||
+                    type == NEW_SESSION_ESTABLISHED)
+                {
+                    BgpUpdateNlri NLRI;
+                    BgpUpdatePathAttributeList content;
+
+                    unsigned int nbAS = entry->getASCount();
+                    content.setAsPathArraySize(1);
+
+                    content.getAsPathForUpdate(0).setValueArraySize(1);
+                    content.getAsPathForUpdate(0).getFlagsForUpdate().transitiveBit = true;
+                    content.getAsPathForUpdate(0).getValueForUpdate(0).setType(AS_SEQUENCE);
+                    //RFC 4271 : set My AS in first position if it is not already
+                    if (entry->getAS(0) != _myAS) {
+                        content.getAsPathForUpdate(0).setLength(2+(4*(nbAS + 1)));
+                        content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValueArraySize(nbAS + 1);
+                        content.getAsPathForUpdate(0).getValueForUpdate(0).setLength(nbAS + 1);
+                        content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(0, _myAS);
+                        for (unsigned int j = 1; j < nbAS + 1; j++) {
+                            content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(j, entry->getAS(j - 1));
+                        }
+                    }
+                    else {
+                        content.getAsPathForUpdate(0).setLength(2+(4*nbAS));
+                        content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValueArraySize(nbAS);
+                        content.getAsPathForUpdate(0).getValueForUpdate(0).setLength(nbAS);
+                        for (unsigned int j = 0; j < nbAS; j++) {
+                            content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(j, entry->getAS(j));
+                        }
+                    }
+
+                    InterfaceEntry *iftEntry = (elem).second->getLinkIntf();
+                    content.getOriginForUpdate().getFlagsForUpdate().transitiveBit = true;
+                    content.getOriginForUpdate().setValue((elem).second->getType());
+                    content.getNextHopForUpdate().getFlagsForUpdate().transitiveBit = true;
+                    content.getNextHopForUpdate().setValue(iftEntry->ipv4Data()->getIPAddress());
+                    Ipv4Address netMask = entry->getNetmask();
+                    NLRI.prefix = entry->getDestination().doAnd(netMask);
+                    NLRI.length = (unsigned char)netMask.getNetmaskLength();
+                    {
+                        Packet *pk = new Packet("BgpUpdate");
+                        const auto& updateMsg = makeShared<BgpUpdateMessage>();
+                        updateMsg->setPathAttributeLength(1);
+                        updateMsg->setPathAttributeListArraySize(1);
+                        updateMsg->setPathAttributeList(content);
+                        updateMsg->setNLRI(NLRI);
+                        pk->insertAtFront(updateMsg);
+                        (elem).second->getSocket()->send(pk);
+                        (elem).second->addUpdateMsgSent();
+                    }
+                }
             }
         }
     }
+    if (type == WITHDRAWN_ROUTE)
+        deleteBGPRoutingEntry(entry);
 }
 
 void Bgp::updateSendProcess6(const unsigned char type, SessionId sessionIndex, RoutingTableEntry6 *entry)
@@ -674,77 +719,149 @@ void Bgp::updateSendProcess6(const unsigned char type, SessionId sessionIndex, R
     for (auto & elem : _BGPSessions)
     {
         if((elem).second->isMultiAddress()) {
-            if (isInTable6(_prefixListOUT6, entry) != (unsigned long)-1 || isInTable6(_prefixList6, entry) != (unsigned long)-1 || isInASList6(_ASListOUT6, entry) ||
-                ((elem).first == sessionIndex && type != NEW_SESSION_ESTABLISHED) ||
-                (type == NEW_SESSION_ESTABLISHED && (elem).first != sessionIndex) ||
-                !(elem).second->isEstablished())
-            {
-                //std::cout<< getParentModule()->getName()<<" is in as list6 " << _ASListOUT6.size() << std::endl;
-                continue;
-            }
-            if ((_BGPSessions[sessionIndex]->getType() == IGP && (elem).second->getType() == EGP) ||
-                _BGPSessions[sessionIndex]->getType() == EGP ||
-                type == ROUTE_DESTINATION_CHANGED ||
-                type == NEW_SESSION_ESTABLISHED)
-            {
-                BgpUpdateNlri6 NLRI;
-                BgpUpdatePathAttributeList6 content;
+            if (type == WITHDRAWN_ROUTE && (elem).first != sessionIndex) {
+                if ((_BGPSessions[sessionIndex]->getType() == IGP && (elem).second->getType() == EGP) ||
+                    _BGPSessions[sessionIndex]->getType() == EGP) {
 
-                unsigned int nbAS = entry->getASCount();
-                //AS PATH
-                content.setAsPathArraySize(1);
-                content.getAsPathForUpdate(0).setValueArraySize(1);
-                content.getAsPathForUpdate(0).getFlagsForUpdate().transitiveBit = true;
-                content.getAsPathForUpdate(0).getValueForUpdate(0).setType(AS_SEQUENCE);
+                    BgpUpdateWithdrawnRoutes6 NLRI;
+                    BgpUpdatePathAttributeList6 content;
 
-                //RFC 4271 : set My AS in first position if it is not already
-                if (entry->getAS(0) != _myAS) {
-                    content.getAsPathForUpdate(0).setLength(2+(4*(nbAS + 1)));
-                    content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValueArraySize(nbAS + 1);
-                    content.getAsPathForUpdate(0).getValueForUpdate(0).setLength(nbAS + 1);
-                    content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(0, _myAS);
-                    for (unsigned int j = 1; j < nbAS + 1; j++) {
-                        content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(j, entry->getAS(j - 1));
+                    unsigned int nbAS = entry->getASCount();
+                    //AS PATH
+                    content.setAsPathArraySize(1);
+                    content.getAsPathForUpdate(0).setValueArraySize(1);
+                    content.getAsPathForUpdate(0).getFlagsForUpdate().transitiveBit = true;
+                    content.getAsPathForUpdate(0).getValueForUpdate(0).setType(AS_SEQUENCE);
+
+                    //RFC 4271 : set My AS in first position if it is not already
+                    if (entry->getAS(0) != _myAS) {
+                        content.getAsPathForUpdate(0).setLength(2+(4*(nbAS + 1)));
+                        content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValueArraySize(nbAS + 1);
+                        content.getAsPathForUpdate(0).getValueForUpdate(0).setLength(nbAS + 1);
+                        content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(0, _myAS);
+                        for (unsigned int j = 1; j < nbAS + 1; j++) {
+                            content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(j, entry->getAS(j - 1));
+                        }
+                    }
+                    else {
+                        content.getAsPathForUpdate(0).setLength(2+(4*nbAS));
+                        content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValueArraySize(nbAS);
+                        content.getAsPathForUpdate(0).getValueForUpdate(0).setLength(nbAS);
+                        for (unsigned int j = 0; j < nbAS; j++) {
+                            content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(j, entry->getAS(j));
+                        }
+                    }
+                    unsigned char prefLength = (unsigned char)entry->getPrefixLength();
+                    NLRI.prefix = entry->getDestPrefix();
+                    NLRI.length = prefLength;
+
+                    //origin
+                    InterfaceEntry *iftEntry = (elem).second->getLinkIntf();
+                    content.getOriginForUpdate().getFlagsForUpdate().transitiveBit = true;
+                    content.getOriginForUpdate().setValue((elem).second->getType());
+                    //MP reach NLRI
+                    content.getMpReachNlriForUpdate().getFlagsForUpdate().optionalBit = true;
+                    content.getMpReachNlriForUpdate().setLength(0);
+                    //next hop
+                    content.getMpReachNlriForUpdate().getMpReachNlriValueForUpdate().getNextHopForUpdate().getFlagsForUpdate().transitiveBit = true;
+                    //content.getMpReachNlriForUpdate().getMpReachNlriValueForUpdate().getNextHopForUpdate().setValue(iftEntry->ipv6Data()->getGlblAddress());
+                    //nlri
+                    //content.getMpReachNlriForUpdate().getMpReachNlriValueForUpdate().setNLRI(NLRI);
+                    //MP unreach NLRI
+                    content.getMpUnreachNlriForUpdate().getFlagsForUpdate().optionalBit = true;
+                    content.getMpUnreachNlriForUpdate().setLength(20);
+                    content.getMpUnreachNlriForUpdate().getMpUnreachNlriValueForUpdate().setNLRI(NLRI);
+                    //create BGP update message for ipv6 multiaddress family routing
+                    {
+                        Packet *pk = new Packet("BgpUpdate");
+                        const auto& updateMsg = makeShared<BgpUpdateMessage6>();
+                        updateMsg->setPathAttributeListArraySize(1);
+                        updateMsg->setPathAttributeList(content);
+
+                        pk->insertAtFront(updateMsg);
+                        (elem).second->getSocket()->send(pk);
+                        (elem).second->addUpdateMsgSent();
                     }
                 }
-                else {
-                    content.getAsPathForUpdate(0).setLength(2+(4*nbAS));
-                    content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValueArraySize(nbAS);
-                    content.getAsPathForUpdate(0).getValueForUpdate(0).setLength(nbAS);
-                    for (unsigned int j = 0; j < nbAS; j++) {
-                        content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(j, entry->getAS(j));
-                    }
-                }
-                unsigned char prefLength = (unsigned char)entry->getPrefixLength();
-                NLRI.prefix = entry->getDestPrefix();
-                NLRI.length = prefLength;
 
-                //origin
-                InterfaceEntry *iftEntry = (elem).second->getLinkIntf();
-                content.getOriginForUpdate().getFlagsForUpdate().transitiveBit = true;
-                content.getOriginForUpdate().setValue((elem).second->getType());
-                //MP reach NLRI
-                content.getMpReachNlriForUpdate().getFlagsForUpdate().optionalBit = true;
-                content.getMpReachNlriForUpdate().setLength(39);
-                //next hop
-                content.getMpReachNlriForUpdate().getMpReachNlriValueForUpdate().getNextHopForUpdate().getFlagsForUpdate().transitiveBit = true;
-                content.getMpReachNlriForUpdate().getMpReachNlriValueForUpdate().getNextHopForUpdate().setValue(iftEntry->ipv6Data()->getGlblAddress());
-                //nlri
-                content.getMpReachNlriForUpdate().getMpReachNlriValueForUpdate().setNLRI(NLRI);
-                //create BGP update message for ipv6 multiaddress family routing
+            } else if ( type != WITHDRAWN_ROUTE ) {
+
+                if (isInTable6(_prefixListOUT6, entry) != (unsigned long)-1 || isInTable6(_prefixList6, entry) != (unsigned long)-1 || isInASList6(_ASListOUT6, entry) ||
+                    ((elem).first == sessionIndex && type != NEW_SESSION_ESTABLISHED) ||
+                    (type == NEW_SESSION_ESTABLISHED && (elem).first != sessionIndex) ||
+                    !(elem).second->isEstablished())
                 {
-                    Packet *pk = new Packet("BgpUpdate");
-                    const auto& updateMsg = makeShared<BgpUpdateMessage6>();
-                    updateMsg->setPathAttributeListArraySize(1);
-                    updateMsg->setPathAttributeList(content);
+                    //std::cout<< getParentModule()->getName()<<" is in as list6 " << _ASListOUT6.size() << std::endl;
+                    continue;
+                }
+                if ((_BGPSessions[sessionIndex]->getType() == IGP && (elem).second->getType() == EGP) ||
+                    _BGPSessions[sessionIndex]->getType() == EGP ||
+                    type == ROUTE_DESTINATION_CHANGED ||
+                    type == NEW_SESSION_ESTABLISHED)
+                {
+                    BgpUpdateNlri6 NLRI;
+                    BgpUpdatePathAttributeList6 content;
 
-                    pk->insertAtFront(updateMsg);
-                    (elem).second->getSocket()->send(pk);
-                    (elem).second->addUpdateMsgSent();
+                    unsigned int nbAS = entry->getASCount();
+                    //AS PATH
+                    content.setAsPathArraySize(1);
+                    content.getAsPathForUpdate(0).setValueArraySize(1);
+                    content.getAsPathForUpdate(0).getFlagsForUpdate().transitiveBit = true;
+                    content.getAsPathForUpdate(0).getValueForUpdate(0).setType(AS_SEQUENCE);
+
+                    //RFC 4271 : set My AS in first position if it is not already
+                    if (entry->getAS(0) != _myAS) {
+                        content.getAsPathForUpdate(0).setLength(2+(4*(nbAS + 1)));
+                        content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValueArraySize(nbAS + 1);
+                        content.getAsPathForUpdate(0).getValueForUpdate(0).setLength(nbAS + 1);
+                        content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(0, _myAS);
+                        for (unsigned int j = 1; j < nbAS + 1; j++) {
+                            content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(j, entry->getAS(j - 1));
+                        }
+                    }
+                    else {
+                        content.getAsPathForUpdate(0).setLength(2+(4*nbAS));
+                        content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValueArraySize(nbAS);
+                        content.getAsPathForUpdate(0).getValueForUpdate(0).setLength(nbAS);
+                        for (unsigned int j = 0; j < nbAS; j++) {
+                            content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(j, entry->getAS(j));
+                        }
+                    }
+                    unsigned char prefLength = (unsigned char)entry->getPrefixLength();
+                    NLRI.prefix = entry->getDestPrefix();
+                    NLRI.length = prefLength;
+
+                    //origin
+                    InterfaceEntry *iftEntry = (elem).second->getLinkIntf();
+                    content.getOriginForUpdate().getFlagsForUpdate().transitiveBit = true;
+                    content.getOriginForUpdate().setValue((elem).second->getType());
+                    //MP reach NLRI
+                    content.getMpReachNlriForUpdate().getFlagsForUpdate().optionalBit = true;
+                    content.getMpReachNlriForUpdate().setLength(39);
+                    //next hop
+                    content.getMpReachNlriForUpdate().getMpReachNlriValueForUpdate().getNextHopForUpdate().getFlagsForUpdate().transitiveBit = true;
+                    content.getMpReachNlriForUpdate().getMpReachNlriValueForUpdate().getNextHopForUpdate().setValue(iftEntry->ipv6Data()->getGlblAddress());
+                    //nlri
+                    content.getMpReachNlriForUpdate().getMpReachNlriValueForUpdate().setNLRI(NLRI);
+                    //MP unreach NLRI
+                    content.getMpUnreachNlriForUpdate().getFlagsForUpdate().optionalBit = true;
+                    //create BGP update message for ipv6 multiaddress family routing
+                    {
+                        Packet *pk = new Packet("BgpUpdate");
+                        const auto& updateMsg = makeShared<BgpUpdateMessage6>();
+                        updateMsg->setPathAttributeListArraySize(1);
+                        updateMsg->setPathAttributeList(content);
+
+                        pk->insertAtFront(updateMsg);
+                        (elem).second->getSocket()->send(pk);
+                        (elem).second->addUpdateMsgSent();
+                    }
                 }
             }
         }
     }
+    if (type == WITHDRAWN_ROUTE)
+        deleteBGPRoutingEntry6(entry);
 }
 
 bool Bgp::checkExternalRoute(const Ipv4Route *route)

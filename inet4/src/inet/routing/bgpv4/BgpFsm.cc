@@ -553,28 +553,34 @@ void Established::HoldTimer_Expires()
     //- releases all BGP resources,
 
     if (session.isMultiAddress()) {
+        Ipv6Route *rtEntry;
        //std::cout<< "From Peer: "<<session.getPeerAddr6() << std::endl;
-       for (auto & network : session.getNetworksFromPeer6())
-       {
+        for (auto & network : session.getNetworksFromPeer6())
+        {
            //std::cout<< network << std::endl;
            int i = session.isInRoutingTable6(network);
-           if(session.deleteFromRT6(session.getIPRoutingTable6()->getRoute(i)))
-               std::cout<<"deleted route" <<std::endl;
-       }
+           if (i != -1) {
+               rtEntry = session.getIPRoutingTable6()->getRoute(i);
+               session.updateSendWithdrawnProcess6(rtEntry);
+           }
+        }
     } else {
+        Ipv4Route *rtEntry;
        //std::cout<< "From Peer: "<<session.getPeerAddr() << std::endl;
-       for (auto & network : session.getNetworksFromPeer())
-       {
+        for (auto & network : session.getNetworksFromPeer())
+        {
            //std::cout<< network << std::endl;
            int i = session.isInRoutingTable(network);
-           if(session.deleteFromRT(session.getIPRoutingTable()->getRoute(i)))
-               std::cout<<"deleted route" <<std::endl;
-       }
-}
+           if (i != -1) {
+               rtEntry = session.getIPRoutingTable()->getRoute(i);
+               session.updateSendWithdrawnProcess(rtEntry);
+           }
+        }
+    }
 
 
     //- drops the TCP connection,
-    session._info.socket->abort();
+//!!    session._info.socket->abort();
     //- increments the ConnectRetryCounter by 1,
     ++session._connectRetryCounter;
     //- changes its state to Idle.
@@ -615,8 +621,26 @@ void Established::KeepAliveMsgEvent()
     //- restarts its HoldTimer, if the negotiated HoldTime value is non-zero, and
 
 //!!!!!!!!!!!! testing
-//    session.restartsHoldTimer();
+    const char * ipv41 = "10.0.12.1";
+    const char * ipv61 = "fd00:12:12::0";
 
+    Ipv6Address tmpipv6;
+    tmpipv6 = Ipv6Address(ipv61);
+
+    Ipv4Address tmpipv4;
+    tmpipv4.set(ipv41);
+
+   //std::cout << "peer " << session.getPeerAddr6() << " tmp " << tmpipv6 << std::endl;
+    if (session.isMultiAddress()){
+        if (session.getPeerAddr6() != tmpipv6){
+            session.restartsHoldTimer();
+        }
+    } else if (!session.getPeerAddr().equals(tmpipv4)) {
+        session.restartsHoldTimer();
+    }
+
+    //else
+     //   std::cout<<session.getDeviceName()<<std::endl;
     //- remains in the Established state.
 }
 

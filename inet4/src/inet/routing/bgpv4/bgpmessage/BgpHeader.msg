@@ -169,6 +169,7 @@ enum BgpUpdateAttributeTypeCode
     LOCAL_PREF = 5;
     ATOMIC_AGGREGATE = 6;
     MP_REACH_NLRI = 14;
+    MP_UNREACH_NLRI = 15;
 }
 
 struct BgpUpdateAttributeFlags
@@ -285,14 +286,27 @@ class BgpUpdateMpReachNlriValue extends cObject
     BgpUpdateNlri6 NLRI;
 }
 
+class BgpUpdateMpUnreachNlriValue extends cObject 
+{
+	AFITypes AFI = Ipv6;	//2 octets
+    SAFITypes SAFI = unicast;
+    BgpUpdateWithdrawnRoutes6 NLRI;
+}
+
 class BgpUpdatePathAttributeMpReachNlri extends BgpUpdatePathAttributes
 {
     BgpUpdateAttributeFlags flags;
     BgpUpdateAttributeTypeCode type = MP_REACH_NLRI;
 	unsigned char length;
 	BgpUpdateMpReachNlriValue mpReachNlriValue;
-    
+}
 
+class BgpUpdatePathAttributeMpUnreachNlri extends BgpUpdatePathAttributes
+{
+    BgpUpdateAttributeFlags flags;
+    BgpUpdateAttributeTypeCode type = MP_UNREACH_NLRI;
+	unsigned char length;
+	BgpUpdateMpUnreachNlriValue mpUnreachNlriValue;
 }
 
 //
@@ -307,6 +321,7 @@ class BgpUpdatePathAttributeList6 extends cObject
     BgpUpdatePathAttributesLocalPref localPref[]; // optional attribute
     BgpUpdatePathAttributesAtomicAggregate atomicAggregate[]; // optional attribute
     BgpUpdatePathAttributeMpReachNlri mpReachNlri; //optional attribute
+    BgpUpdatePathAttributeMpUnreachNlri mpUnreachNlri; //optional attribute
     
 }
 
@@ -341,7 +356,7 @@ class BgpUpdateMessage6 extends BgpHeader
     chunkLength = BGP_HEADER_OCTETS + BGP_EMPTY_UPDATE_OCTETS;
 	
 	unsigned short withdrawnRoutesLength = 0; // 2 octets
-    BgpUpdateWithdrawnRoutes6 withdrawnRoutes[];
+    BgpUpdateWithdrawnRoutes6 withdrawnRoutes;
     unsigned short pathAttributeLength = 1; // 2 octets
     BgpUpdatePathAttributeList6 pathAttributeList[]; // optional field (size is either 0 or 1)
 }
@@ -353,8 +368,8 @@ class BgpUpdateMessage extends BgpHeader
     chunkLength = BGP_HEADER_OCTETS + BGP_EMPTY_UPDATE_OCTETS;
 
 	unsigned short withdrawnRoutesLength = 0; // 2 octets
-    BgpUpdateWithdrawnRoutes withdrawnRoutes[];
-    unsigned short pathAttributeLength = 1; // 2 octets
+    BgpUpdateWithdrawnRoutes withdrawnRoutes; //withdrawn nlri
+    unsigned short pathAttributeLength = 0; // 2 octets
     BgpUpdatePathAttributeList pathAttributeList[]; // optional field (size is either 0 or 1)
     BgpUpdateNlri NLRI;
 }

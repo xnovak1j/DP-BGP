@@ -49,6 +49,8 @@ const unsigned char NEW_SESSION_ESTABLISHED = 92;
 const unsigned char ASLOOP_NO_DETECTED = 93;
 const unsigned char ASLOOP_DETECTED = 94;
 
+const unsigned char WITHDRAWN_ROUTE = 95;
+
 typedef Ipv4Address NextHop;
 typedef Ipv6Address Nexthop6;
 typedef unsigned short AsId;
