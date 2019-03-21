@@ -926,6 +926,16 @@ void Bgp::routerIntfAndRouteConfig(cXMLElement *rtrConfig)
         //std::cout<< (interface)->getAttribute("id") << std::endl;
         myInterface = (_inft->getInterfaceByName((interface)->getAttribute("id")));
 
+        if (myInterface->isLoopback()) {
+            const char * ipv41 = "127.0.0.0";
+            Ipv4Address tmpipv4;
+            tmpipv4.set(ipv41);
+            int i = isInRoutingTable(_rt, tmpipv4);
+            if (i != -1){
+                _rt->deleteRoute(_rt->getRoute(i));
+            }
+        }
+
         //interface ipv4 configuration
         Ipv4Address addr = (Ipv4Address(((interface)->getElementByPath("Ipv4"))->getAttribute("address")));
         Ipv4Address mask = (Ipv4Address(((interface)->getElementByPath("Ipv4"))->getAttribute("netmask")));
