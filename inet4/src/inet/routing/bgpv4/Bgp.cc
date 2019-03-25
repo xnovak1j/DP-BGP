@@ -664,16 +664,27 @@ void Bgp::updateSendProcess(const unsigned char type, SessionId sessionIndex, Ro
                     content.getAsPathForUpdate(0).getFlagsForUpdate().transitiveBit = true;
                     content.getAsPathForUpdate(0).getValueForUpdate(0).setType(AS_SEQUENCE);
                     //RFC 4271 : set My AS in first position if it is not already
-                    if (entry->getAS(0) != _myAS) {
-                        content.getAsPathForUpdate(0).setLength(2+(4*(nbAS + 1)));
-                        content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValueArraySize(nbAS + 1);
-                        content.getAsPathForUpdate(0).getValueForUpdate(0).setLength(nbAS + 1);
-                        content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(0, _myAS);
-                        for (unsigned int j = 1; j < nbAS + 1; j++) {
-                            content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(j, entry->getAS(j - 1));
+
+                    if (_BGPSessions[sessionIndex]->getType() == EGP || (elem).second->getType() == EGP) {
+                        if (entry->getAS(0) != _myAS) {
+                            content.getAsPathForUpdate(0).setLength(2+(4*(nbAS + 1)));
+                            content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValueArraySize(nbAS + 1);
+                            content.getAsPathForUpdate(0).getValueForUpdate(0).setLength(nbAS + 1);
+                            content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(0, _myAS);
+                            for (unsigned int j = 1; j < nbAS + 1; j++) {
+                                content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(j, entry->getAS(j - 1));
+                            }
                         }
-                    }
-                    else {
+                        else
+                        {
+                            content.getAsPathForUpdate(0).setLength(2+(4*nbAS));
+                            content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValueArraySize(nbAS);
+                            content.getAsPathForUpdate(0).getValueForUpdate(0).setLength(nbAS);
+                            for (unsigned int j = 0; j < nbAS; j++) {
+                                content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(j, entry->getAS(j));
+                            }
+                        }
+                    } else {
                         content.getAsPathForUpdate(0).setLength(2+(4*nbAS));
                         content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValueArraySize(nbAS);
                         content.getAsPathForUpdate(0).getValueForUpdate(0).setLength(nbAS);
@@ -681,6 +692,8 @@ void Bgp::updateSendProcess(const unsigned char type, SessionId sessionIndex, Ro
                             content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(j, entry->getAS(j));
                         }
                     }
+
+
 
                     InterfaceEntry *iftEntry = (elem).second->getLinkIntf();
                     content.getOriginForUpdate().getFlagsForUpdate().transitiveBit = true;
@@ -734,16 +747,25 @@ void Bgp::updateSendProcess6(const unsigned char type, SessionId sessionIndex, R
                     content.getAsPathForUpdate(0).getValueForUpdate(0).setType(AS_SEQUENCE);
 
                     //RFC 4271 : set My AS in first position if it is not already
-                    if (entry->getAS(0) != _myAS) {
-                        content.getAsPathForUpdate(0).setLength(2+(4*(nbAS + 1)));
-                        content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValueArraySize(nbAS + 1);
-                        content.getAsPathForUpdate(0).getValueForUpdate(0).setLength(nbAS + 1);
-                        content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(0, _myAS);
-                        for (unsigned int j = 1; j < nbAS + 1; j++) {
-                            content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(j, entry->getAS(j - 1));
+                    if (_BGPSessions[sessionIndex]->getType() == EGP || (elem).second->getType() == EGP) {
+                        if (entry->getAS(0) != _myAS) {
+                            content.getAsPathForUpdate(0).setLength(2+(4*(nbAS + 1)));
+                            content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValueArraySize(nbAS + 1);
+                            content.getAsPathForUpdate(0).getValueForUpdate(0).setLength(nbAS + 1);
+                            content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(0, _myAS);
+                            for (unsigned int j = 1; j < nbAS + 1; j++) {
+                                content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(j, entry->getAS(j - 1));
+                            }
                         }
-                    }
-                    else {
+                        else {
+                            content.getAsPathForUpdate(0).setLength(2+(4*nbAS));
+                            content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValueArraySize(nbAS);
+                            content.getAsPathForUpdate(0).getValueForUpdate(0).setLength(nbAS);
+                            for (unsigned int j = 0; j < nbAS; j++) {
+                                content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValue(j, entry->getAS(j));
+                            }
+                        }
+                    } else {
                         content.getAsPathForUpdate(0).setLength(2+(4*nbAS));
                         content.getAsPathForUpdate(0).getValueForUpdate(0).setAsValueArraySize(nbAS);
                         content.getAsPathForUpdate(0).getValueForUpdate(0).setLength(nbAS);
