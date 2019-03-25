@@ -20,6 +20,8 @@ import inet.networklayer.configurator.ipv4.Ipv4NetworkConfigurator;
 import inet.node.bgp.BgpRouter;
 import inet.node.inet.StandardHost;
 
+import inet.common.scenario.ScenarioManager;
+
 import inet.node.bgp.BgpRouter6;
 import inet.networklayer.configurator.ipv6.Ipv6FlatNetworkConfigurator;
 
@@ -78,6 +80,10 @@ network BGPTest3
             addStaticRoutes = false;
             addDefaultRoutes = false;
             addSubnetRoutes = false;
+        }
+        
+         scenarioManager: ScenarioManager {
+            @display("p=150,20;is=s");
         }
 
  //       configurator6: Ipv6FlatNetworkConfigurator {
