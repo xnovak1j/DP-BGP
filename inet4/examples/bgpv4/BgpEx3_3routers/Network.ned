@@ -74,7 +74,7 @@ network BGPTest3
 
         configurator: Ipv4NetworkConfigurator {
             @display("p=50,20;is=s");
-         
+         	config = xmldoc("IPv4Config.xml");
             addStaticRoutes = false;
             addDefaultRoutes = false;
             addSubnetRoutes = false;

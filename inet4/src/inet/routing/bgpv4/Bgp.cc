@@ -579,14 +579,14 @@ bool Bgp::tieBreakingProcess(RoutingTableEntry *oldEntry, RoutingTableEntry *ent
     if (entry->getASCount() < oldEntry->getASCount()) {
         deleteBGPRoutingEntry(oldEntry);
         return false;
-    }
-
-    /* b) Remove from consideration all routes that are not tied for
-         having the lowest Origin number in their Origin attribute.*/
-    if (entry->getPathType() < oldEntry->getPathType()) {
-        deleteBGPRoutingEntry(oldEntry);
-        return false;
-    }
+    } //else if (entry->getASCount() == oldEntry->getASCount()) {
+        /* b) Remove from consideration all routes that are not tied for
+                having the lowest Origin number in their Origin attribute.*/
+           if (entry->getPathType() < oldEntry->getPathType()) {
+               deleteBGPRoutingEntry(oldEntry);
+               return false;
+           }
+   // }
     return true;
 }
 
@@ -651,8 +651,8 @@ void Bgp::updateSendProcess(const unsigned char type, SessionId sessionIndex, Ro
                 }
                 if ((_BGPSessions[sessionIndex]->getType() == IGP && (elem).second->getType() == EGP) ||
                     _BGPSessions[sessionIndex]->getType() == EGP ||
-                    type == ROUTE_DESTINATION_CHANGED ||
-                    type == NEW_SESSION_ESTABLISHED)
+                    (type == ROUTE_DESTINATION_CHANGED && ((_BGPSessions[sessionIndex]->getType() == IGP && entry->getPathType() != IGP) || _BGPSessions[sessionIndex]->getType() == EGP)) ||
+                    (type == NEW_SESSION_ESTABLISHED && ((_BGPSessions[sessionIndex]->getType() == IGP && entry->getPathType() != IGP) || _BGPSessions[sessionIndex]->getType() == EGP)))
                 {
                     BgpUpdateNlri NLRI;
                     BgpUpdatePathAttributeList content;
@@ -796,8 +796,8 @@ void Bgp::updateSendProcess6(const unsigned char type, SessionId sessionIndex, R
                 }
                 if ((_BGPSessions[sessionIndex]->getType() == IGP && (elem).second->getType() == EGP) ||
                     _BGPSessions[sessionIndex]->getType() == EGP ||
-                    type == ROUTE_DESTINATION_CHANGED ||
-                    type == NEW_SESSION_ESTABLISHED)
+                    (type == ROUTE_DESTINATION_CHANGED && ((_BGPSessions[sessionIndex]->getType() == IGP && entry->getPathType() != IGP) || _BGPSessions[sessionIndex]->getType() == EGP)) ||
+                    (type == NEW_SESSION_ESTABLISHED && ((_BGPSessions[sessionIndex]->getType() == IGP && entry->getPathType() != IGP) || _BGPSessions[sessionIndex]->getType() == EGP)))
                 {
                     BgpUpdateNlri6 NLRI;
                     BgpUpdatePathAttributeList6 content;

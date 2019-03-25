@@ -13,7 +13,7 @@ namespace bgp {
 class INET_API RoutingTableEntry6 : public Ipv6Route
 {
   public:
-    typedef unsigned char RoutingPathType;
+    typedef unsigned short RoutingPathType;
 
     RoutingTableEntry6(void);
     RoutingTableEntry6(const Ipv6Route *entry);
