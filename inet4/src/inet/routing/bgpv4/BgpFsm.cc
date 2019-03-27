@@ -214,6 +214,9 @@ void Active::TcpConnectionFails()
      *  increments the ConnectRetryCounter by 1
      *  changes its state to Idle
      * */
+    BgpSession& session = TopState::box().getModule();
+    session.restartsConnectRetryTimer();
+    session._connectRetryCounter++;
     setState<Idle>();
 }
 
@@ -396,6 +399,9 @@ void OpenConfirm::TcpConnectionFails()
      * changes its state to Idle
      * */
     std::cout << "OpenConfirm::TcpConnectionFails" << std::endl;
+    BgpSession& session = TopState::box().getModule();
+    session.restartsConnectRetryTimer();
+    session._connectRetryCounter++;
     setState<Idle>();
 }
 

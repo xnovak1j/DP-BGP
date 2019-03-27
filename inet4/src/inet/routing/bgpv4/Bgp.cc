@@ -1210,6 +1210,7 @@ void Bgp::loadConfigFromXML(cXMLElement *config)
         throw cRuntimeError("BGP Error:  No AS configuration for Router ID: %s", _rt->getRouterId().str().c_str());
 
     //create IGP Session(s)
+
     if (_routerInSameASList.size()) {
         unsigned int routerPeerPosition = 1;
         delayTab[3] += myPos;
@@ -1281,11 +1282,15 @@ SessionId Bgp::createSession(BgpSessionType typeSession, const char *peerAddr)
     info.peerAddr.set(peerAddr);
     info.localAddr = _rt->getInterfaceForDestAddr(info.peerAddr)->getIpv4Address();
 
+    info.linkIntf = _rt->getInterfaceForDestAddr(info.peerAddr);
+    if (info.linkIntf == nullptr) {
+        throw cRuntimeError("BGP Error: No configuration interface for peer address: %s", peerAddr);
+    }
     if (typeSession == EGP) {
-        info.linkIntf = _rt->getInterfaceForDestAddr(info.peerAddr);
-        if (info.linkIntf == nullptr) {
-            throw cRuntimeError("BGP Error: No configuration interface for peer address: %s", peerAddr);
-        }
+//        info.linkIntf = _rt->getInterfaceForDestAddr(info.peerAddr);
+//        if (info.linkIntf == nullptr) {
+//            throw cRuntimeError("BGP Error: No configuration interface for peer address: %s", peerAddr);
+//        }
         info.sessionID = info.peerAddr.getInt() + info.linkIntf->ipv4Data()->getIPAddress().getInt();
     }
     else {
@@ -1534,22 +1539,22 @@ SessionId Bgp::findNextSession(BgpSessionType type, bool startSession)
             break;
         }
     }
-    if (startSession == true && type == IGP && sessionID != static_cast<SessionId>(-1)) {
-        InterfaceEntry *linkIntf;
-        if (_BGPSessions[sessionID]->isMultiAddress())
-            linkIntf = _rt6->getOutputInterfaceForDestination(_BGPSessions[sessionID]->getPeerAddr6());
-        else
-            linkIntf = _rt->getInterfaceForDestAddr(_BGPSessions[sessionID]->getPeerAddr());
-
-        if (linkIntf == nullptr) {
-            if (_BGPSessions[sessionID]->isMultiAddress())
-                throw cRuntimeError("No configuration interface for peer address: %s", _BGPSessions[sessionID]->getPeerAddr6().str().c_str());
-            else
-                throw cRuntimeError("No configuration interface for peer address: %s", _BGPSessions[sessionID]->getPeerAddr().str().c_str());
-        }
-        _BGPSessions[sessionID]->setlinkIntf(linkIntf);
-        _BGPSessions[sessionID]->startConnection();
-    }
+//    if (startSession == true && type == IGP && sessionID != static_cast<SessionId>(-1)) {
+//        InterfaceEntry *linkIntf;
+//        if (_BGPSessions[sessionID]->isMultiAddress())
+//            linkIntf = _rt6->getOutputInterfaceForDestination(_BGPSessions[sessionID]->getPeerAddr6());
+//        else
+//            linkIntf = _rt->getInterfaceForDestAddr(_BGPSessions[sessionID]->getPeerAddr());
+//
+//        if (linkIntf == nullptr) {
+//            if (_BGPSessions[sessionID]->isMultiAddress())
+//                throw cRuntimeError("No configuration interface for peer address: %s", _BGPSessions[sessionID]->getPeerAddr6().str().c_str());
+//            else
+//                throw cRuntimeError("No configuration interface for peer address: %s", _BGPSessions[sessionID]->getPeerAddr().str().c_str());
+//        }
+//        _BGPSessions[sessionID]->setlinkIntf(linkIntf);
+//        _BGPSessions[sessionID]->startConnection();
+//    }
     return sessionID;
 }
 

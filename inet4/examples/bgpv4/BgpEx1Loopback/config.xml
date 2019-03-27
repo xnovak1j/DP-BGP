@@ -59,18 +59,23 @@
     			<Address-family id="Ipv4">
     				<Neighbor address="10.0.12.1" remote-as="100" />
     				<Neighbor address="10.0.20.2" remote-as="200" />
+    				<!--Neighbor address="10.0.23.2" remote-as="200" /-->
     				<Network address="200.0.2.0" />
     				<Network address="200.0.3.0" />
     			</Address-family>
     			<Address-family id="Ipv6">
     				<Neighbor address="fd00:12:12::0" remote-as="100" />
     				<Neighbor address="fd00:20:20::1" remote-as="200" />
+    				<!--Neighbor address="fd00:23:23::1" remote-as="200" /-->
+    				
     				<Network address="fd00:200:0:200::" />
     				<Network address="fd00:200:0:300::" />
     			</Address-family>	
     		</Bgp>	
 			<Route destination='200.0.3.0' netmask='255.255.255.252' interface='eth1'/>
-			<Route6 destination='fd00:200:0:300::/64' interface='eth1' nexthop="fd00:20:20::1"/>		
+			<Route6 destination='fd00:200:0:300::/64' interface='eth1' nexthop="fd00:20:20::1"/>
+			<!--Route destination='10.0.23.0' netmask='255.255.255.252' interface='eth1'/>
+			<Route6 destination='fd00:23:23::/127' interface='eth1' nexthop="fd00:20:20::1"/-->		
     	</Router>
     	
     	<Router name="R3" id="200.0.3.1">
@@ -122,15 +127,20 @@
     		<Bgp as="300">
     			<Address-family id="Ipv4">
     				<Neighbor address="10.0.23.1" remote-as="200" />
+    				<!--Neighbor address="10.0.20.1" remote-as="200" /-->
     				<Network address="100.0.4.0" />
     			</Address-family>
     			<Address-family id="Ipv6">
     				<Neighbor address="fd00:23:23::0" remote-as="200" />
+    				<!--Neighbor address="fd00:20:20::0" remote-as="200" /-->
     				<Network address="fd00:300:0:400::" />
     				
     				<!-- DenyRoute address="fd00:200:0:300::/64" /-->
     			</Address-family>	
     		</Bgp>
+    		
+    		<!-- Route destination='10.0.20.0' netmask='255.255.255.252' interface='eth0'/>
+    		<Route6 destination='fd00:20:20::/127' interface='eth0' nexthop="fd00:23:23::0"/ -->
     	</Router>
     </Devices>
               

@@ -79,10 +79,11 @@ void BgpSession::setTimers(simtime_t *delayTab)
     _connectRetryTime = delayTab[0];
     _holdTime = delayTab[1];
     _keepAliveTime = delayTab[2];
-    if (_info.sessionType == IGP) {
-        _StartEventTime = delayTab[3];
-    }
-    else if (delayTab[3] != SIMTIME_ZERO) {
+//    if (_info.sessionType == IGP) {
+//        _StartEventTime = delayTab[3];
+//    }
+//    else
+    if (delayTab[3] != SIMTIME_ZERO) {
         _StartEventTime = delayTab[3];
         _ptrStartEvent = new cMessage("BGP Start", START_EVENT_KIND);
         _bgpRouting.getScheduleAt(_bgpRouting.getSimTime() + _StartEventTime, _ptrStartEvent);
@@ -116,8 +117,8 @@ void BgpSession::restartConnection()
     if (_ptrStartEvent == nullptr) {
         _ptrStartEvent = new cMessage("BGP Start", START_EVENT_KIND);
     }
-
-    _bgpRouting.getScheduleAt(_bgpRouting.getSimTime() + 15 , _ptrStartEvent);
+    //std::cout<<_StartEventTime<<std::endl;
+    _bgpRouting.getScheduleAt(_bgpRouting.getSimTime() + _StartEventTime , _ptrStartEvent);
     _ptrStartEvent->setContextPointer(this);
 }
 
