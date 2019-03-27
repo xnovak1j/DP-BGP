@@ -103,7 +103,7 @@ class INET_API Bgp : public cSimpleModule, public ILifecycle, public TcpSocket::
      *
      * \return true if it is, false else
      */
-    bool checkExternalRoute(const Ipv4Route *ospfRoute);
+//    bool checkExternalRoute(const Ipv4Route *ospfRoute);
 
   private:
     void handleTimer(cMessage *timer);
@@ -139,10 +139,7 @@ class INET_API Bgp : public cSimpleModule, public ILifecycle, public TcpSocket::
     unsigned long isInTable(std::vector<RoutingTableEntry *> rtTable, RoutingTableEntry *entry);
     unsigned long isInTable6(std::vector<RoutingTableEntry6 *> rtTable, RoutingTableEntry6 *entry);
 
-//    std::vector<const char *> loadASConfig(cXMLElementList& ASConfig);
-//    void loadSessionConfig(cXMLElementList& sessionList, simtime_t *delayTab);
     void loadConfigFromXML(cXMLElement *config);
-//    AsId findMyAS(cXMLElementList& ASList, int& outRouterPosition);
     bool ospfExist(IIpv4RoutingTable *rtTable);
     void loadTimerConfig(cXMLElementList& timerConfig, simtime_t *delayTab);
     unsigned char asLoopDetection(RoutingTableEntry *entry, AsId myAS);
@@ -188,10 +185,6 @@ class INET_API Bgp : public cSimpleModule, public ILifecycle, public TcpSocket::
     std::vector<Ipv6Address> _networksToAdvertise6;
     std::vector<const char *> _routerInSameASList;
     std::vector<const char *> _routerInSameASList6;
-
-//    std::map<Ipv4Address, std::vector<Ipv4Address>> _routesFromPeer;
-//    std::map<Ipv6Address, std::vector<Ipv6Address>> _routesFromPeer6;
-
 
     static const int BGP_TCP_CONNECT_VALID = 71;
     static const int BGP_TCP_CONNECT_CONFIRM = 72;

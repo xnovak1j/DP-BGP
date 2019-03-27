@@ -48,16 +48,6 @@ void Idle::ManualStart()
     EV_INFO << "Processing Idle::event1" << std::endl;
     BgpSession& session = TopState::box().getModule();
 
-//    if(session._info.multiAddress) {
-//        std::cout << "--------------------Router session info Rid Ipv6 "<< session._info.routerID << std::endl;
-//        std::cout << "--------------------Local address Ipv6 "<< session._info.localAddr6 << std::endl;
-//        std::cout << "--------------------Peer address Ipv6 "<< session._info.peerAddr6 << std::endl;
-//    } else {
-//        std::cout << "++++++++++++++++++++Router session info Rid "<< session._info.routerID << std::endl;
-//        std::cout << "++++++++++++++++++++Local address "<< session._info.localAddr << std::endl;
-//        std::cout << "++++++++++++++++++++Peer address"<< session._info.peerAddr << std::endl;
-//    }
-
     //In this state, BGP FSM refuses all incoming BGP connections for this peer.
     //No resources are allocated to the peer.  In response to a ManualStart event
     //(Event 1), the local system:
@@ -216,7 +206,7 @@ void Active::TcpConnectionConfirmed()
 }
 
 void Active::TcpConnectionFails()
-{   // xnovak1j
+{
     /*If the local system receives a TcpConnectionFails event (Event
       18), the local system:
      *  restarts the ConnectRetryTimer (with the initial value),
@@ -467,7 +457,6 @@ void Established::entry()
                     BGPEntry6->addAS(session._info.ASValue);
 
                     session.updateSendProcess6(BGPEntry6);
-                    //std::cout<<"update6 :"<<rtEntry6<< " "<< i <<std::endl;
                     delete BGPEntry6;
                 }
             }
@@ -486,36 +475,15 @@ void Established::entry()
         IIpv4RoutingTable *IPRoutingTable = session.getIPRoutingTable();
         std::vector<Ipv4Address> networksToAdvertise = session.getNetworksToAdvertise();
 
-        //std::cout << "device " << session.getDeviceName() << " number networks to advertise: " << networksToAdvertise.size() << std::endl;
-
-        //for (int i = 1; i < IPRoutingTable->getNumRoutes(); i++) {
         for (auto network : networksToAdvertise) {
             int i = session.isInRoutingTable(network);
             if(i != -1) {
                 rtEntry = IPRoutingTable->getRoute(i);
-                /*if (rtEntry->getNetmask() == Ipv4Address::ALLONES_ADDRESS ||
-                    rtEntry->getSourceType() == IRoute::IFACENETMASK ||
-                    rtEntry->getSourceType() == IRoute::MANUAL ||
-                    rtEntry->getSourceType() == IRoute::BGP)
-                {
-                    std::cout<<"odseknute start :"<<rtEntry<< " "<< i << " " <<rtEntry->getSourceType()<<std::endl;
-                    continue;
-                }*/
-
-                /*if(!(rtEntry->getSourceType() == IRoute::MANUAL && rtEntry->getMetric() == 0)) {
-                    continue;
-                }*/
 
                 if (session.getType() == EGP) {
-                    // actually not working with ospf
-                   /* if (rtEntry->getSourceType() == IRoute::OSPF && session.checkExternalRoute(rtEntry)) {
-                        std::cout<<"odseknute :"<<rtEntry<< " "<< i <<std::endl;
-                        continue;
-                    }*/
                         BGPEntry = new RoutingTableEntry(rtEntry);
                         BGPEntry->addAS(session._info.ASValue);
                         session.updateSendProcess(BGPEntry);
-                        //std::cout<<"update :"<<rtEntry<< " "<< i <<std::endl;
                         delete BGPEntry;
                 }
             }
@@ -539,13 +507,11 @@ void Established::ConnectRetryTimer_Expires()
     EV_TRACE << "Processing Established::ConnectRetryTimer_Expires" << std::endl;
     BgpSession& session = TopState::box().getModule();
     //In response to any other event (Events 9, 12-13, 20-22), the local system:
-//TODO- deletes all routes associated with this connection,
+// deletes all routes associated with this connection,
     if (session.isMultiAddress()) {
         Ipv6Route *rtEntry;
-       //std::cout<< "From Peer: "<<session.getPeerAddr6() << std::endl;
         for (auto & network : session.getNetworksFromPeer6())
         {
-           //std::cout<< network << std::endl;
            int i = session.isInRoutingTable6(network);
            if (i != -1) {
                rtEntry = session.getIPRoutingTable6()->getRoute(i);
@@ -554,10 +520,8 @@ void Established::ConnectRetryTimer_Expires()
         }
     } else {
         Ipv4Route *rtEntry;
-       //std::cout<< "From Peer: "<<session.getPeerAddr() << std::endl;
         for (auto & network : session.getNetworksFromPeer())
         {
-           //std::cout<< network << std::endl;
            int i = session.isInRoutingTable(network);
            if (i != -1) {
                rtEntry = session.getIPRoutingTable()->getRoute(i);
@@ -565,8 +529,6 @@ void Established::ConnectRetryTimer_Expires()
            }
         }
     }
-
-
     //- sets the ConnectRetryTimer to zero,
     session.restartsConnectRetryTimer(false);
     //- releases all BGP resources,
@@ -592,10 +554,8 @@ void Established::HoldTimer_Expires()
 
     if (session.isMultiAddress()) {
         Ipv6Route *rtEntry;
-       //std::cout<< "From Peer: "<<session.getPeerAddr6() << std::endl;
         for (auto & network : session.getNetworksFromPeer6())
         {
-           //std::cout<< network << std::endl;
            int i = session.isInRoutingTable6(network);
            if (i != -1) {
                rtEntry = session.getIPRoutingTable6()->getRoute(i);
@@ -604,10 +564,8 @@ void Established::HoldTimer_Expires()
         }
     } else {
         Ipv4Route *rtEntry;
-       //std::cout<< "From Peer: "<<session.getPeerAddr() << std::endl;
         for (auto & network : session.getNetworksFromPeer())
         {
-           //std::cout<< network << std::endl;
            int i = session.isInRoutingTable(network);
            if (i != -1) {
                rtEntry = session.getIPRoutingTable()->getRoute(i);
@@ -615,8 +573,6 @@ void Established::HoldTimer_Expires()
            }
         }
     }
-
-
     //- drops the TCP connection,
     session._info.socket->abort();
     //- increments the ConnectRetryCounter by 1,
@@ -668,18 +624,8 @@ void Established::KeepAliveMsgEvent()
     Ipv4Address tmpipv4;
     tmpipv4.set(ipv41);
 
-   //std::cout << "peer " << session.getPeerAddr6() << " tmp " << tmpipv6 << std::endl;
-//    if (session.isMultiAddress()){
-////        if (session.getPeerAddr6() != tmpipv6){
-            session.restartsHoldTimer();
-//        }
-////    } else
-//    if (!session.getPeerAddr().equals(tmpipv4)) {
-//        session.restartsHoldTimer();
-//    }
+    session.restartsHoldTimer();
 
-    //else
-     //   std::cout<<session.getDeviceName()<<std::endl;
     //- remains in the Established state.
 }
 
@@ -698,24 +644,6 @@ void Established::UpdateMsgEvent()
 void Established::exit()
 {
     std::cout << "Established::exit" << std::endl;
-
-//    BgpSession& session = TopState::box().getModule();
-//
-//       if (session.isMultiAddress()) {
-//           std::cout<< "From Peer: "<<session.getPeerAddr6() << std::endl;
-//           for (auto & network : session.getNetworksFromPeer6())
-//           {
-//               std::cout<< network << std::endl;
-//           }
-//       } else {
-//           std::cout<< "From Peer: "<<session.getPeerAddr() << std::endl;
-//           for (auto & network : session.getNetworksFromPeer())
-//           {
-//               std::cout<< network << std::endl;
-//           }
-//       }
-
-
 }
 
 } // namespace fsm

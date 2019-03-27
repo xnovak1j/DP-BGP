@@ -74,7 +74,7 @@ class INET_API BgpSession : public cObject
     IIpv4RoutingTable *getIPRoutingTable() { return _bgpRouting.getIPRoutingTable(); }
     std::vector<RoutingTableEntry *> getBGPRoutingTable() { return _bgpRouting.getBGPRoutingTable(); }
     Macho::Machine<fsm::TopState>& getFSM() { return *_fsm; }
-    bool checkExternalRoute(const Ipv4Route *ospfRoute) { return _bgpRouting.checkExternalRoute(ospfRoute); }
+//    bool checkExternalRoute(const Ipv4Route *ospfRoute) { return _bgpRouting.checkExternalRoute(ospfRoute); }
     void updateSendProcess(RoutingTableEntry *entry) { return _bgpRouting.updateSendProcess(NEW_SESSION_ESTABLISHED, _info.sessionID, entry); }
     void updateSendProcess6(RoutingTableEntry6 *entry) { return _bgpRouting.updateSendProcess6(NEW_SESSION_ESTABLISHED, _info.sessionID, entry); }
     void updateSendWithdrawnProcess(Ipv4Route *entry) { return _bgpRouting.updateSendProcess(WITHDRAWN_ROUTE, _info.sessionID, static_cast<RoutingTableEntry *>(entry)); }
