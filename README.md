@@ -4,9 +4,8 @@ This README would normally document whatever steps are necessary to get your app
 
 ### What is this repository for? ###
 
-* Quick summary
-* Version
-* [Learn Markdown](https://bitbucket.org/tutorials/markdowndemo)
+* BGPv4 with multi address-family support in OMNeT++ simulator 
+* Version - bgpv4
 
 ### How do I get set up? ###
 
