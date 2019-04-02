@@ -45,13 +45,13 @@
     	
     	<Router name="R2" id="200.0.2.1">
     		<Interfaces>
-    			<Interface id="eth1">
-    				<Ipv4 address="10.0.23.1" netmask="255.255.255.252" />
-    				<Ipv6 address="fd00:23:23::0/127" />
-    			</Interface>
     			<Interface id="eth0">
     				<Ipv4 address="10.0.12.2" netmask="255.255.255.252" />
     				<Ipv6 address="fd00:12:12::1/127" />
+    			</Interface>
+    			<Interface id="eth1">
+    				<Ipv4 address="10.0.23.1" netmask="255.255.255.252" />
+    				<Ipv6 address="fd00:23:23::0/127" />
     			</Interface>
     			<Interface id="eth2">
     				<Ipv4 address="10.0.25.1" netmask="255.255.255.252" />
@@ -74,25 +74,20 @@
     	
     	<Router name="R3" id="200.0.3.1">
     		<Interfaces>
-    			<Interface id="eth1">
-    				<Ipv4 address="10.0.23.2" netmask="255.255.255.252" />
+    			<Interface id="eth0">
+					<Ipv4 address="10.0.23.2" netmask="255.255.255.252" />
     				<Ipv6 address="fd00:23:23::1/127" />
     			</Interface>
-    			<Interface id="eth0">
-    				<Ipv4 address="10.0.34.1" netmask="255.255.255.252" />
-    				<Ipv6 address="fd00:34:34::0/127" />
-    			</Interface>
-    			<Interface id="eth2">
+    			<Interface id="eth1">
     				<Ipv4 address="10.0.35.1" netmask="255.255.255.252" />
     				<Ipv6 address="fd00:35:35::0/127" />
-    			</Interface>
+    			</Interface>    			
     		</Interfaces>
     		<Bgp as="200">
     			<Address-family id="Ipv4">
     				<Neighbor address="10.0.23.1" remote-as="200" />
     				<Neighbor address="10.0.35.2" remote-as="200" />
-    				
-    				
+    				   				
     				<!-- DenyASIN as="100" / -->
     			</Address-family>
     			<Address-family id="Ipv6">
@@ -102,44 +97,17 @@
     			</Address-family>	
     		</Bgp>
     	</Router>
-    	
-    	<Router name="R4" id="100.0.4.1">
-    		<Interfaces>
-    			<Interface id="lo0">
-    				<Ipv4 address="100.0.4.1" netmask="255.255.255.252" />
-    				<Ipv6 address="fd00:300:0:400::1/64" />
-    			</Interface>
-    			<Interface id="eth0">
-    				<Ipv4 address="10.0.34.2" netmask="255.255.255.252" />
-    				<Ipv6 address="fd00:34:34::1/127" />	
-    			</Interface>
-    		</Interfaces>
-    		<Bgp as="300">
-    			<Address-family id="Ipv4">
-    				
-    			</Address-family>
-    			<Address-family id="Ipv6">
-    				
-    				
-    				<!-- DenyRoute address="fd00:200:0:300::/64" /-->
-    			</Address-family>	
-    		</Bgp>
-    	</Router>
-    	
+    	  	
     	<Router name="R5" id="200.0.5.1">
     		<Interfaces>
     			<Interface id="eth0">
-    				<Ipv4 address="10.0.56.1" netmask="255.255.255.252" />
-    				<Ipv6 address="fd00:56:56::0/127" />
+    				<Ipv4 address="10.0.35.2" netmask="255.255.255.252" />
+    				<Ipv6 address="fd00:35:35::1/127" />
     			</Interface>
     			<Interface id="eth1">
     				<Ipv4 address="10.0.25.2" netmask="255.255.255.252" />
     				<Ipv6 address="fd00:25:25::1/127" />
     			</Interface>   			
-    			<Interface id="eth2">
-    				<Ipv4 address="10.0.35.2" netmask="255.255.255.252" />
-    				<Ipv6 address="fd00:35:35::1/127" />
-    			</Interface>
     		</Interfaces>
     		<Bgp as="200">
     			<Address-family id="Ipv4">
@@ -156,26 +124,6 @@
     		</Bgp>
     	</Router>
     	
-    	<Router name="R6" id="100.0.6.1">
-    		<Interfaces>
-    			<Interface id="lo0">
-    				<Ipv4 address="100.0.6.1" netmask="255.255.255.252" />
-    				<Ipv6 address="fd00:400:0:600::1/64" />
-    			</Interface>
-    			<Interface id="eth0">
-    				<Ipv4 address="10.0.56.2" netmask="255.255.255.252" />
-    				<Ipv6 address="fd00:56:56::1/127" />	
-    			</Interface>
-    		</Interfaces>
-    		<Bgp as="400">
-    			<Address-family id="Ipv4">
-    				
-    			</Address-family>
-    			<Address-family id="Ipv6">
-    				
-    			</Address-family>	
-    		</Bgp>
-    	</Router>
     </Devices>
               
  </BGPConfig> 

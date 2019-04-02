@@ -52,25 +52,14 @@ network BGPTest4
             parameters:
                 @display("p=450,100");
             gates:
-                ethg[3];
+                ethg[2];
         }
-        R4: BgpRouter6 {
-            parameters:
-                @display("p=650,100");
-            gates:
-                ethg[1];
-        }
+       
         R5: BgpRouter6 {
             parameters:
                 @display("p=375,200");
             gates:
-                ethg[3];
-        }
-        R6: BgpRouter6 {
-            parameters:
-                @display("p=375,300");
-            gates:
-                ethg[1];
+                ethg[2];
         }
 
 
@@ -92,14 +81,10 @@ network BGPTest4
 
     connections:
         R1.ethg[0] <--> LINK_100 <--> R2.ethg[0];
-
-        R2.ethg[1] <--> LINK_100 <--> R3.ethg[1];
+        R2.ethg[1] <--> LINK_100 <--> R3.ethg[0];
         R2.ethg[2] <--> LINK_100 <--> R5.ethg[1];
-
-        R3.ethg[0] <--> LINK_100 <--> R4.ethg[0];
-        R3.ethg[2] <--> LINK_100 <--> R5.ethg[2];
+        R3.ethg[1] <--> LINK_100 <--> R5.ethg[0];
         
-        R5.ethg[0] <--> LINK_100 <--> R6.ethg[0];
 
 
 
