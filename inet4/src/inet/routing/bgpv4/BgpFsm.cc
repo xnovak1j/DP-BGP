@@ -454,23 +454,23 @@ void Established::entry()
         Ipv6RoutingTable *IPRoutingTable6 = session.getIPRoutingTable6();
         std::vector<Ipv6Address> networksToAdvertise6 = session.getNetworksToAdvertise6();
 
-        for (auto network : networksToAdvertise6) {
-            int i = session.isInRoutingTable6(network);
-            if(i != -1) {
-                rtEntry6 = IPRoutingTable6->getRoute(i);
-                if (session.getType() == EGP) {
-                    BGPEntry6 = new RoutingTableEntry6(rtEntry6);
-                    BGPEntry6->addAS(session._info.ASValue);
-
-                    session.updateSendProcess6(BGPEntry6);
-                    delete BGPEntry6;
-                }
-            }
-        }
+//        for (auto network : networksToAdvertise6) {
+//            int i = session.isInRoutingTable6(network);
+//            if(i != -1) {
+//                rtEntry6 = IPRoutingTable6->getRoute(i);
+//                if (session.getType() == EGP) {
+//                    BGPEntry6 = new RoutingTableEntry6(rtEntry6);
+//                    BGPEntry6->addAS(session._info.ASValue);
+//
+//                    session.updateSendProcess6(BGPEntry6);
+//                    delete BGPEntry6;
+//                }
+//            }
+//        }
         std::vector<RoutingTableEntry6 *> BGPRoutingTable6 = session.getBGPRoutingTable6();
         for (auto & elem : BGPRoutingTable6) {
             Ipv6Address tmp;
-            if (elem->getNextHop() != tmp && elem->getASCount() != 0)
+            //if (elem->getNextHop() != tmp && elem->getASCount() != 0)
                 session.updateSendProcess6((elem));
         }
     } else {
@@ -481,23 +481,23 @@ void Established::entry()
         IIpv4RoutingTable *IPRoutingTable = session.getIPRoutingTable();
         std::vector<Ipv4Address> networksToAdvertise = session.getNetworksToAdvertise();
 
-        for (auto network : networksToAdvertise) {
-            int i = session.isInRoutingTable(network);
-            if(i != -1) {
-                rtEntry = IPRoutingTable->getRoute(i);
-
-                if (session.getType() == EGP) {
-                        BGPEntry = new RoutingTableEntry(rtEntry);
-                        BGPEntry->addAS(session._info.ASValue);
-                        session.updateSendProcess(BGPEntry);
-                        delete BGPEntry;
-                }
-            }
-        }
+//        for (auto network : networksToAdvertise) {
+//            int i = session.isInRoutingTable(network);
+//            if(i != -1) {
+//                rtEntry = IPRoutingTable->getRoute(i);
+//
+//                if (session.getType() == EGP) {
+//                        BGPEntry = new RoutingTableEntry(rtEntry);
+//                        BGPEntry->addAS(session._info.ASValue);
+//                        session.updateSendProcess(BGPEntry);
+//                        delete BGPEntry;
+//                }
+//            }
+//        }
 
         std::vector<RoutingTableEntry *> BGPRoutingTable = session.getBGPRoutingTable();
         for (auto & elem : BGPRoutingTable) {
-            if(elem->getGateway() != Ipv4Address::UNSPECIFIED_ADDRESS && elem->getASCount() != 0)
+            //if(elem->getGateway() != Ipv4Address::UNSPECIFIED_ADDRESS && elem->getASCount() != 0)
                 session.updateSendProcess((elem));
         }
     }
