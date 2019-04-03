@@ -998,6 +998,8 @@ void Bgp::routerIntfAndRouteConfig(cXMLElement *rtrConfig)
         entry->setNetmask(Ipv4Address((elem)->getAttribute("netmask")));
         entry->setInterface(_inft->getInterfaceByName((elem)->getAttribute("interface")));
         entry->setMetric(0);
+        Ipv4Address nexthop = (Ipv4Address(elem->getAttribute("nexthop")));
+        entry->setGateway(nexthop);
         entry->setSourceType(IRoute::MANUAL);
 
         _rt->addRoute(entry);
@@ -1018,7 +1020,6 @@ void Bgp::routerIntfAndRouteConfig(cXMLElement *rtrConfig)
 
         address6 = Ipv6Address(prefix6.c_str());
         Ipv6Address nextHop6 = (Ipv6Address(elem->getAttribute("nexthop")));
-
         _rt6->addStaticRoute(address6, prefLength,_inft->getInterfaceByName((elem)->getAttribute("interface"))->getInterfaceId(), nextHop6);
     }
 }
@@ -1089,6 +1090,9 @@ void Bgp::loadBgpNodeConfig(cXMLElement *bgpNode, simtime_t *delayTab, int pos)
                 if (i != -1) {
                     const Ipv4Route *rtEntry = _rt->getRoute(i);
                     RoutingTableEntry *BGPEntry = new RoutingTableEntry(rtEntry);
+                    if(rtEntry->getSourceType() != IRoute::IFACENETMASK) {
+
+                    }
                     BGPEntry->setPathType(IGP);
                     _BGPRoutingTable.push_back(BGPEntry);
                 }

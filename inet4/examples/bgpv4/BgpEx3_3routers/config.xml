@@ -45,6 +45,10 @@
     	
     	<Router name="R2" id="200.0.2.1">
     		<Interfaces>
+    			<Interface id="lo0">
+    				<Ipv4 address="192.168.0.1" netmask="255.255.255.0" />
+    				<Ipv6 address="2001:db8:0:0::1/64" />
+    			</Interface>
     			<Interface id="eth1">
     				<Ipv4 address="10.0.23.1" netmask="255.255.255.252" />
     				<Ipv6 address="fd00:23:23::0/127" />
@@ -63,11 +67,13 @@
     				<Neighbor address="10.0.12.1" remote-as="100" />
     				<Neighbor address="10.0.23.2" remote-as="200" />
     				<Neighbor address="10.0.25.2" remote-as="200" />
+    				<Network address="192.168.0.0" />
     			</Address-family>
     			<Address-family id="Ipv6">
     				<Neighbor address="fd00:12:12::0" remote-as="100" />
     				<Neighbor address="fd00:23:23::1" remote-as="200" />
     				<Neighbor address="fd00:25:25::1" remote-as="200" />
+    				<Network address="2001:db8:0:0::" />
     			</Address-family>	
     		</Bgp>		
     	</Router>
