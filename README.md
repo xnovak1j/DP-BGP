@@ -1,28 +1,26 @@
 # README #
 
-This README would normally document whatever steps are necessary to get your application up and running.
-
 ### What is this repository for? ###
 
 * BGPv4 with multi address-family support in OMNeT++ simulator 
 * Version - bgpv4
 
-### How do I get set up? ###
+### Version ###
+* OMNeT++ 5.4.1
+* INET 4.0
 
-* Summary of set up
-* Configuration
-* Dependencies
-* Database configuration
-* How to run tests
-* Deployment instructions
+### Setup ###
+* Install correct OMNeT++ IDE (https://omnetpp.org/download/)
+* Download this project and import it to OMNeT++
 
-### Contribution guidelines ###
+### Changelog ###
+* BGP Update message creation - more address prefixes can be added to the message
+* BGP Update message processing - router can process more NLRI prefixes from the message
+* Connect Retry Timer is correctly finished
+* FSM - updated some states of finish state automat
+* Multi address-family support (IPv4 and IPv6)
+* Link failure reaction and reconnection
+* Correct sending of BGP Update message on the iBGP multipoint segment
+* Existence of iBGP peerings is independent on eBGP peerings
 
-* Writing tests
-* Code review
-* Other guidelines
 
-### Who do I talk to? ###
-
-* Repo owner or admin
-* Other community or team contact
