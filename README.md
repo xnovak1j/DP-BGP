@@ -23,4 +23,7 @@
 * Correct sending of BGP Update message on the iBGP multipoint segment
 * Existence of iBGP peerings is independent on eBGP peerings
 
+### Simulation examples ###
+* Examples are available in directory: inet4/examples/bgpv4
+
 
