@@ -1,6 +1,6 @@
 # README #
 
-### OMNeT++/INET BGPv4 protocol###
+### OMNeT++/INET BGPv4 protocol ###
 
 * BGPv4 with multi address-family support in OMNeT++ simulator 
 * Version - bgpv4
