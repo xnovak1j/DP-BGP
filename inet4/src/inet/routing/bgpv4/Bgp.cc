@@ -951,7 +951,7 @@ void Bgp::routerIntfAndRouteConfig(cXMLElement *rtrConfig)
         entry->setDestination(networkAdd);
         entry->setNetmask(intfData->getNetmask());
         entry->setInterface(myInterface);
-        entry->setMetric(21);
+        entry->setMetric(0);
         entry->setSourceType(IRoute::IFACENETMASK);
 
         _rt->addRoute(entry);
@@ -997,7 +997,7 @@ void Bgp::routerIntfAndRouteConfig(cXMLElement *rtrConfig)
         entry->setDestination(Ipv4Address((elem)->getAttribute("destination")));
         entry->setNetmask(Ipv4Address((elem)->getAttribute("netmask")));
         entry->setInterface(_inft->getInterfaceByName((elem)->getAttribute("interface")));
-        entry->setMetric(0);
+        entry->setMetric(1);
         Ipv4Address nexthop = (Ipv4Address(elem->getAttribute("nexthop")));
         entry->setGateway(nexthop);
         entry->setSourceType(IRoute::MANUAL);

@@ -22,6 +22,8 @@
 * Link failure reaction and reconnection
 * Correct sending of BGP Update message on the iBGP multipoint segment
 * Existence of iBGP peerings is independent on eBGP peerings
+* Deleted dependency on OSPF protocol
+* New configuration file created
 
 ### Simulation examples ###
 * Examples are available in directory: inet4/examples/bgpv4
