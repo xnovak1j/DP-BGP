@@ -61,8 +61,8 @@
     				<Network address="fd00:200:0:300::" />
     			</Address-family>	
     		</Bgp>	
-			<Route destination='200.0.3.0' netmask='255.255.255.252' interface='eth0'/>
-			<Route6 destination='fd00:200:0:300::/64' interface='eth0' nexthop="fd00:20:20::1"/>		
+			<Route destination='200.0.3.0' netmask='255.255.255.252' interface='eth1' nexthop="10.0.20.2"/>
+			<Route6 destination='fd00:200:0:300::/64' interface='eth1' nexthop="fd00:20:20::1"/>		
     	</Router>
     	
     	<Router name="R3" id="200.0.3.1">
@@ -94,7 +94,7 @@
     				<Network address="fd00:200:0:300::" />
     			</Address-family>	
     		</Bgp>
-    		<Route destination='200.0.2.0' netmask='255.255.255.252' interface='eth0'/>
+    		<Route destination='200.0.2.0' netmask='255.255.255.252' interface='eth0' nexthop="10.0.20.1"/>
     		<Route6 destination='fd00:200:0:200::/64' interface='eth0' nexthop="fd00:20:20::0"/>
     	</Router>
     	

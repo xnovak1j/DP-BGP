@@ -5,7 +5,7 @@ OSPF dependency was removed, this functionality was replaced by static routes
 BGP works with IPv4 and IPv6 in one simulation
 
 Topology
-4 routers - R1, R2, R3, R4, R5, R6
+4 routers - R1, R2, R3, R5
 R1 - AS100 - external peering with R2
 R2 - AS200 - external peering with R1, internal peering with R3, R5
 R3 - AS200 - external peering with R4, internal peering with R2, R5
